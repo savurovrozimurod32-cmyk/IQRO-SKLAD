@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0F6B52">
+<link rel="icon" href="icon-192.png">
+<title>IQRO — Javon to'ldirish ro'yxati</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDF0EE; --card:#FFFFFF;
+    --ink:#18211D; --ink-soft:#5C6862; --ink-faint:#8B958F;
+    --rule:#D6DBD7; --rule-soft:#E9ECEA;
+    --ok:#0F6B52; --ok-weak:#E2EFEA;
+    --warn:#A87218; --warn-weak:#F7EEDF;
+    --bad:#8C2F1F; --bad-weak:#F6E7E4;
+    --r:5px; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Poppins',ui-sans-serif,system-ui,'Segoe UI',sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1140px;margin:0 auto;padding:28px 20px 90px}
+  [hidden]{display:none !important}
+
+  header{margin-bottom:26px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px}
+  h1{font-size:28px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em}
+  .lede{color:var(--ink-soft);max-width:66ch;margin:0;font-size:14.5px}
+  .barstrip{height:18px;margin-top:18px;opacity:.14;
+    background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 5px,var(--ink) 5px 6px,transparent 6px 11px,var(--ink) 11px 14px,transparent 14px 16px)}
+
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:22px 24px;margin-bottom:16px}
+  h2{font-size:17px;font-weight:600;margin:0 0 4px}
+  h3{font-size:13px;font-weight:600;margin:0 0 2px}
+  .sub{color:var(--ink-soft);font-size:13.5px;margin:0 0 18px}
+
+  /* ---- yuklash ---- */
+  .drop{border:2px dashed var(--rule);border-radius:var(--r);padding:38px 20px;text-align:center;transition:border-color .15s,background .15s}
+  .drop.over{border-color:var(--ok);background:var(--ok-weak)}
+  .drop .big{font-size:16px;font-weight:600;margin:0 0 4px}
+  .drop .small{color:var(--ink-soft);font-size:13px;margin:0 0 20px}
+  .drop .fmt{color:var(--ink-faint);font-size:12px;font-family:var(--mono);margin:16px 0 0}
+  input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+
+  button{font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;border-radius:var(--r);padding:11px 20px;border:1px solid transparent}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .primary{background:var(--ok);color:#fff}
+  .primary:hover:not(:disabled){opacity:.88}
+  .primary.lg{padding:14px 30px;font-size:15px;font-weight:600}
+  .ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+  .ghost:hover{background:var(--paper)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  select:focus,button:focus-visible,input:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+  .drop:focus-within{border-color:var(--ok)}
+
+  /* ---- manba paneli ---- */
+  .source{display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+    background:var(--ok-weak);border:1px solid #CBE0D7;border-radius:var(--r);padding:12px 16px;margin-bottom:16px;font-size:13.5px}
+  .source .tag{font-family:var(--mono);font-size:12px;background:#fff;border:1px solid var(--rule);border-radius:3px;padding:2px 8px}
+  .source .sp{flex:1}
+
+  details.settings{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);margin-bottom:16px}
+  details.settings>summary{cursor:pointer;padding:14px 20px;font-weight:500;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  details.settings>summary::after{content:"▾";color:var(--ink-faint)}
+  details.settings[open]>summary::after{content:"▴"}
+  details.settings>summary::-webkit-details-marker{display:none}
+  .settings-body{padding:0 20px 20px;border-top:1px solid var(--rule-soft)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:16px}
+  label{display:block;font-size:12px;font-weight:500;color:var(--ink-soft);margin-bottom:5px}
+  select{width:100%;padding:9px 10px;border:1px solid var(--rule);border-radius:var(--r);background:#fff;font-family:inherit;font-size:14px;color:var(--ink)}
+  select.guessed{border-color:var(--warn);background:var(--warn-weak)}
+  .guessnote{font-size:11.5px;color:var(--warn);margin-top:5px}
+  .mapcard{border:1px solid var(--rule);border-radius:var(--r);padding:16px;margin-top:14px}
+  .mapcard .fn{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);margin:0}
+  .preview{margin-top:14px;overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);max-height:210px}
+  .preview table{border-collapse:collapse;font-size:12px;width:100%}
+  .preview td{border-bottom:1px solid var(--rule-soft);padding:5px 9px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+  .preview tr{cursor:pointer}
+  .preview tr.hdr{background:var(--ok-weak);font-weight:600}
+  .preview tr:hover{background:#F4F6F4}
+  .preview .rn{font-family:var(--mono);color:var(--ink-faint);background:#FAFBFA}
+
+  /* ---- hero ---- */
+  .slip{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:26px 24px 30px;margin-bottom:16px;position:relative;overflow:hidden}
+  .slip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:radial-gradient(circle at 5px -1px,transparent 5px,var(--paper) 5px);background-size:10px 10px}
+  .bignum{font-family:var(--mono);font-size:58px;line-height:1;font-weight:600;letter-spacing:-.03em;color:var(--ok)}
+  .bignum small{font-size:15px;font-weight:500;color:var(--ink-soft);letter-spacing:0;margin-left:12px}
+  .slipsub{color:var(--ink-soft);font-size:14px;margin-top:10px;max-width:72ch}
+
+  /* ---- ro'yxat ---- */
+  .listhead{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .search{padding:9px 12px;border:1px solid var(--rule);border-radius:var(--r);font-family:inherit;font-size:14px;min-width:220px}
+  .tabs{display:flex;border-bottom:1px solid var(--rule);margin:0 0 16px;overflow-x:auto}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:11px 15px;color:var(--ink-soft);font-weight:500;white-space:nowrap}
+  .tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ok)}
+  .tab .cnt{font-family:var(--mono);font-size:12px;margin-left:6px}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r)}
+  table.data{width:100%;border-collapse:collapse;font-size:14px}
+  table.data th{text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);padding:10px;border-bottom:1px solid var(--rule);white-space:nowrap;background:#FBFCFB;position:sticky;top:0}
+  table.data td{padding:10px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+  table.data tr:last-child td{border-bottom:none}
+  table.data tr.done td{opacity:.42;text-decoration:line-through}
+  .n{font-family:var(--mono);color:var(--ink-faint);font-size:12px;width:38px;text-align:right}
+  .nm{font-weight:500}
+  .bc{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
+  .qty{font-family:var(--mono);text-align:right;font-weight:600;font-size:15px;white-space:nowrap}
+  .chk{width:34px}
+  .chk input{width:17px;height:17px;accent-color:var(--ok);cursor:pointer}
+  .pill{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .pill.absent{background:var(--bad-weak);color:var(--bad)}
+  .pill.zero{background:var(--warn-weak);color:var(--warn)}
+  .empty{padding:44px;text-align:center;color:var(--ink-soft);font-size:14px}
+  .warnbox{border-left:3px solid var(--warn);background:var(--warn-weak);padding:12px 16px;margin-bottom:12px;font-size:13.5px}
+  .errbox{border-left:3px solid var(--bad);background:var(--bad-weak);padding:12px 16px;margin:14px 0;font-size:13.5px;color:var(--bad)}
+
+  /* ---- statistika ---- */
+  table.stats{width:100%;border-collapse:collapse;font-size:14px}
+  table.stats td{padding:11px 12px;border-bottom:1px solid var(--rule-soft)}
+  table.stats tr:last-child td{border-bottom:none}
+  table.stats .m{color:var(--ink-soft)}
+  table.stats .v{font-family:var(--mono);font-weight:600;text-align:right;white-space:nowrap;width:90px}
+  table.stats .d{color:var(--ink-faint);font-size:12.5px}
+  table.stats .dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:9px;vertical-align:-1px}
+
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:860px){.charts{grid-template-columns:1fr}}
+  .chart{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:20px 22px}
+  .chart .cap{font-size:12px;color:var(--ink-soft);margin:2px 0 16px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--ink-soft)}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:6px}
+  svg text{font-family:var(--mono);fill:var(--ink-soft)}
+  svg .lbl{font-family:'Poppins',sans-serif;fill:var(--ink)}
+
+  footer{margin-top:34px;font-size:12.5px;color:var(--ink-soft);line-height:1.7}
+  @media(max-width:600px){h1{font-size:22px}.bignum{font-size:42px}.wrap{padding:18px 14px 60px}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media print{
+    body{background:#fff}
+    header .barstrip,#upload,.settings,.source,.toolbar,.tabs,.charts,footer,#statsCard{display:none!important}
+    .slip,.tablewrap{border-color:#999}
+    table.data{font-size:11px} table.data th{position:static}
+    .chk{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">IQRO · Ombor</p>
+  <h1>Javon to'ldirish ro'yxati</h1>
+  <p class="lede">Sklad Kirimda bor, Sklad IQROda yo'q tovarlar. 1C qoldiq hisoboti bilan ishlaydi. Fayl kompyuteringizdan chiqmaydi, internet kerak emas.</p>
+  <div class="barstrip" aria-hidden="true"></div>
+</header>
+
+<!-- YUKLASH -->
+<div class="card" id="upload">
+  <div class="drop" id="drop">
+    <p class="big">1C dan chiqarilgan Excel faylni yuklang</p>
+    <p class="small">Ikkita list bo'lishi kerak: biri Sklad Kirim, biri IQRO</p>
+    <button class="primary lg" id="pick">Faylni tanlash</button>
+    <input type="file" id="fileinput" multiple accept=".xlsx,.xls,.csv">
+    <p class="fmt">yoki faylni shu yerga sudrab tashlang · .xlsx .xls .csv</p>
+  </div>
+  <div id="loaderr"></div>
+</div>
+
+<!-- MANBA -->
+<div class="source" id="source" hidden>
+  <span><b id="srcName"></b></span>
+  <span class="tag" id="srcK"></span>
+  <span style="color:var(--ink-faint)">→</span>
+  <span class="tag" id="srcQ"></span>
+  <span class="sp"></span>
+  <button class="ghost" id="reset">Boshqa fayl</button>
+</div>
+
+<!-- SOZLAMALAR -->
+<details class="settings" id="settings" hidden>
+  <summary id="setSummary">Listlar va ustunlar</summary>
+  <div class="settings-body">
+    <div class="grid" style="max-width:640px">
+      <div><label>Sklad Kirim listi — ombor</label><select id="shKirim"></select></div>
+      <div><label>Sklad IQRO listi — savdo zonasi</label><select id="shIqro"></select></div>
+    </div>
+    <div id="maps"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="primary" id="calc">Qayta hisoblash</button>
+    </div>
+    <div id="calcerr"></div>
+  </div>
+</details>
+
+<!-- NATIJA -->
+<div id="out" hidden>
+  <div class="slip">
+    <div class="bignum" id="bignum">0<small>ta tovar ko'chirilishi kerak</small></div>
+    <div class="slipsub" id="slipsub"></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="kerak" aria-selected="true">Ko'chirish kerak <span class="cnt" id="c-kerak"></span></button>
+      <button class="tab" role="tab" data-tab="warn" aria-selected="false">Tekshirish kerak <span class="cnt" id="c-warn"></span></button>
+      <button class="tab" role="tab" data-tab="ortiq" aria-selected="false">Faqat IQROda <span class="cnt" id="c-ortiq"></span></button>
+    </div>
+    <div class="listhead">
+      <div><h2 id="listTitle">Ko'chirish varaqasi</h2><p class="sub" id="listSub" style="margin:0"></p></div>
+      <div class="toolbar">
+        <input class="search" id="search" placeholder="Nom yoki kod bo'yicha qidirish">
+        <button class="ghost" id="csv">CSV</button>
+        <button class="ghost" id="print">Chop etish</button>
+      </div>
+    </div>
+    <div id="panel"></div>
+  </div>
+
+  <div class="card" id="statsCard">
+    <h2>Statistika</h2>
+    <p class="sub">Barcha raqamlar tanlangan ikki listdan olingan.</p>
+    <table class="stats" id="statsTable"></table>
+  </div>
+
+  <div class="charts" id="charts"></div>
+</div>
+
+<footer>
+  <p><b>Qoida:</b> tovar ro'yxatga tushadi, agar Sklad Kirimda qoldiq &gt; 0 <b>va</b> Sklad IQROda qoldiq = 0 yoki qator umuman yo'q bo'lsa. Ulash siz tanlagan kalit ustuni (Kod / Artikul / Shtrix-kod) bo'yicha.</p>
+  <p><b>Nima buzilishi mumkin:</b> (1) 1C qoldig'i 0 bo'lgan qatorlarni chiqarmasa, «Umuman yo'q» soni oshib ketadi — bu yangi tovar emas, bo'sh javon. (2) Guruh sarlavhasi va «Итого» qatorlari tovar deb hisoblanmaydi. (3) Bir kod ikki qatorda kelsa qoldiqlar qo'shiladi. (4) Miqdor raqam bo'lmasa, qator 0 deb hisoblanmaydi. Har biri «Tekshirish kerak» ga yoziladi — jim xato yo'q.</p>
+</footer>
+</div>
+
+<script src="xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+var sheets=[], K=null, Q=null, result=null, activeTab='kerak', done={};
+
+var HINTS={
+  key:['код','kod','артикул','artikul','штрих','shtrix','штрихкод','barcode','ean','sku'],
+  name:['номенклатур','наимен','назван','tovar','nom','name','mahsulot'],
+  qty:['конечный остаток','остаток','остат','кол-во','количество','qoldiq','miqdor','soni','qty','quantity','stock']
+};
+var TOTAL_WORDS=['итого','всего','jami','umumiy','итог'];
+
+function norm(s){return String(s==null?'':s).trim().toLowerCase();}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fmt(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;}
+function isTotalRow(n){n=norm(n);if(!n)return false;return TOTAL_WORDS.some(function(w){return n.indexOf(w)===0;});}
+function guessCol(h,kind){for(var i=0;i<h.length;i++){var s=norm(h[i]);if(!s)continue;
+  for(var j=0;j<HINTS[kind].length;j++) if(s.indexOf(HINTS[kind][j])!==-1) return i;} return -1;}
+function guessHeaderRow(rows){
+  var best=0,bs=-1;
+  for(var i=0;i<Math.min(rows.length,15);i++){
+    var f=rows[i].filter(function(c){return String(c||'').trim()!=='';}).length;
+    if(f<3) continue;
+    var t=rows[i].filter(function(c){var s=String(c||'').trim();return s!==''&&isNaN(parseFloat(s.replace(',','.')));}).length;
+    var hit=rows[i].filter(function(c){var n=norm(c);
+      return HINTS.qty.concat(HINTS.name,HINTS.key).some(function(k){return n.indexOf(k)!==-1;});}).length;
+    var sc=f+t*2+hit*6;
+    if(sc>bs){bs=sc;best=i;}
+  }
+  return best;
+}
+function cleanKey(v){var s=String(v==null?'':v).trim();if(s.charAt(0)==="'")s=s.slice(1);
+  s=s.replace(/[\s\u00A0]/g,'');if(/e\+/i.test(s))return '__EXP__';return s;}
+function parseQty(v){if(v==null)return NaN;var s=String(v).trim();if(s===''||s==='-')return NaN;
+  s=s.replace(/[\s\u00A0]/g,'').replace(',','.');var n=parseFloat(s);return isFinite(n)?n:NaN;}
+
+/* ---------- yuklash ---------- */
+var drop=document.getElementById('drop'), input=document.getElementById('fileinput');
+document.getElementById('pick').addEventListener('click',function(){input.click();});
+['dragenter','dragover'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('over');});});
+['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over');});});
+drop.addEventListener('drop',function(e){handleFiles(e.dataTransfer.files);});
+input.addEventListener('change',function(){handleFiles(input.files);});
+
+function handleFiles(fl){
+  document.getElementById('loaderr').innerHTML='';
+  var list=Array.prototype.slice.call(fl);
+  if(!list.length) return;
+  var pending=list.length, srcNames=[];
+  list.forEach(function(f){
+    if(/\.mxl$/i.test(f.name)){
+      document.getElementById('loaderr').innerHTML='<div class="errbox"><b>'+esc(f.name)+'</b> — 1C ning .mxl formati o\'qilmaydi. 1C da hisobotni oching → <b>Fayl → Saqlash</b> → tur: <b>Excel (.xlsx)</b>.</div>';
+      if(--pending===0) afterLoad(srcNames); return;
+    }
+    var r=new FileReader();
+    r.onerror=function(){ document.getElementById('loaderr').innerHTML='<div class="errbox">Fayl o\'qilmadi: '+esc(f.name)+'</div>'; if(--pending===0) afterLoad(srcNames); };
+    r.onload=function(e){
+      try{
+        var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        var added=0;
+        wb.SheetNames.forEach(function(sn){
+          var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+          rows=rows.filter(function(r){return r.some(function(c){return String(c||'').trim()!=='';});});
+          if(rows.length>=2){ sheets.push({id:sheets.length,file:f.name,name:sn,rows:rows}); added++; }
+        });
+        if(!added) throw new Error("faylda ma'lumot topilmadi");
+        srcNames.push(f.name);
+      }catch(err){
+        document.getElementById('loaderr').innerHTML='<div class="errbox"><b>'+esc(f.name)+'</b> ochilmadi: '+esc(err.message)+'</div>';
+      }
+      if(--pending===0) afterLoad(srcNames);
+    };
+    r.readAsArrayBuffer(f);
+  });
+}
+
+function afterLoad(srcNames){
+  if(!sheets.length) return;
+  document.getElementById('srcName').textContent=srcNames.join(' + ')||'Fayl';
+  buildSheetPickers();
+  document.getElementById('upload').hidden=true;
+  document.getElementById('source').hidden=false;
+  document.getElementById('settings').hidden=false;
+  if(sheets.length<2){
+    document.getElementById('settings').open=true;
+    document.getElementById('calcerr').innerHTML='<div class="errbox">Faqat bitta list topildi. Ikkinchi faylni ham yuklang yoki listni tanlang.</div>';
+    return;
+  }
+  autoRun();
+}
+
+/* ---------- list tanlash ---------- */
+function buildSheetPickers(){
+  var a=document.getElementById('shKirim'), b=document.getElementById('shIqro');
+  a.innerHTML='';b.innerHTML='';
+  [a,b].forEach(function(s){s.appendChild(new Option('— tanlanmagan —',''));});
+  sheets.forEach(function(s){
+    var t=s.name+' ('+(s.rows.length-1)+' qator)';
+    a.appendChild(new Option(t,s.id)); b.appendChild(new Option(t,s.id));
+  });
+  sheets.forEach(function(s){
+    var n=norm(s.name);
+    if(a.value==='' && (n.indexOf('kirim')!==-1||n.indexOf('sklad')!==-1||n.indexOf('склад')!==-1||n.indexOf('ombor')!==-1)) a.value=s.id;
+    if(b.value==='' && (n.indexOf('iqro')!==-1||n.indexOf('икро')!==-1)) b.value=s.id;
+  });
+  if(a.value===b.value){ a.value=''; b.value=''; }
+  if(a.value===''&&b.value===''&&sheets.length===2){ a.value=sheets[0].id; b.value=sheets[1].id; }
+  a.onchange=b.onchange=function(){ K=null;Q=null;autoRun(); };
+}
+
+function initMap(sid){
+  var rows=sheets[sid].rows, hr=guessHeaderRow(rows), h=rows[hr];
+  var m={key:guessCol(h,'key'),name:guessCol(h,'name'),qty:guessCol(h,'qty')};
+  return {sheetId:sid,headerRow:hr,map:m,guessed:{key:m.key>=0,name:m.name>=0,qty:m.qty>=0}};
+}
+
+/* fayl yuklangach avtomatik ishga tushadi */
+function autoRun(){
+  var av=document.getElementById('shKirim').value, bv=document.getElementById('shIqro').value;
+  var eb=document.getElementById('calcerr'); eb.innerHTML='';
+  if(av===''||bv===''||av===bv){
+    document.getElementById('settings').open=true;
+    document.getElementById('out').hidden=true;
+    eb.innerHTML='<div class="errbox">Kirim va IQRO uchun turli listlarni tanlang.</div>';
+    return;
+  }
+  if(!K||K.sheetId!=parseInt(av,10)) K=initMap(parseInt(av,10));
+  if(!Q||Q.sheetId!=parseInt(bv,10)) Q=initMap(parseInt(bv,10));
+  buildMaps();
+  var missing=['key','name','qty'].filter(function(k){return K.map[k]<0||Q.map[k]<0;});
+  if(missing.length){
+    document.getElementById('settings').open=true;
+    document.getElementById('out').hidden=true;
+    eb.innerHTML='<div class="errbox">Ustunlar avtomatik topilmadi. Quyida qo\'lda belgilang, keyin «Qayta hisoblash» ni bosing.</div>';
+    return;
+  }
+  calculate();
+}
+
+/* ---------- ustunlar ---------- */
+function buildMaps(){
+  var maps=document.getElementById('maps'); maps.innerHTML='';
+  var anyGuess=false;
+  [[K,'Sklad Kirim — ombor'],[Q,'Sklad IQRO — savdo zonasi']].forEach(function(p){
+    var st=p[0]; if(!st) return;
+    var sh=sheets[st.sheetId], headers=sh.rows[st.headerRow];
+    var card=el('div','mapcard');
+    card.appendChild(el('h3',null,p[1]));
+    card.appendChild(el('p','fn',esc(sh.file)+' → list «'+esc(sh.name)+'» · sarlavha '+(st.headerRow+1)+'-qator'));
+    var grid=el('div','grid');
+    [['key','Ulash kaliti — Kod / Artikul / Shtrix-kod'],['name','Nomenklatura — tovar nomi'],['qty','Qoldiq / miqdor']].forEach(function(kv){
+      var key=kv[0], w=el('div');
+      w.appendChild(el('label',null,kv[1]));
+      var s=document.createElement('select');
+      s.appendChild(new Option('— tanlanmagan —',-1));
+      headers.forEach(function(h,i){s.appendChild(new Option(String(h||'').trim()||('(ustun '+(i+1)+')'),i));});
+      s.value=st.map[key];
+      if(st.guessed[key]){s.classList.add('guessed');anyGuess=true;}
+      s.addEventListener('change',function(){st.map[key]=parseInt(s.value,10);st.guessed[key]=false;s.classList.remove('guessed');
+        var n=w.querySelector('.guessnote'); if(n)n.remove();});
+      w.appendChild(s);
+      if(st.guessed[key]) w.appendChild(el('div','guessnote','Avtomatik topildi — tekshiring'));
+      grid.appendChild(w);
+    });
+    card.appendChild(grid);
+    var pv=el('div','preview'), tb=el('table');
+    for(var r=0;r<Math.min(sh.rows.length,12);r++){
+      (function(r){
+        var tr=el('tr'); if(r===st.headerRow) tr.className='hdr';
+        tr.title='Sarlavha qatori sifatida belgilash';
+        tr.appendChild(el('td','rn',String(r+1)));
+        for(var c=0;c<Math.min(sh.rows[r].length,9);c++) tr.appendChild(el('td',null,esc(sh.rows[r][c])));
+        tr.addEventListener('click',function(){
+          st.headerRow=r;
+          var hh=sh.rows[r];
+          st.map={key:guessCol(hh,'key'),name:guessCol(hh,'name'),qty:guessCol(hh,'qty')};
+          st.guessed={key:st.map.key>=0,name:st.map.name>=0,qty:st.map.qty>=0};
+          buildMaps();
+        });
+        tb.appendChild(tr);
+      })(r);
+    }
+    pv.appendChild(tb); card.appendChild(pv); maps.appendChild(card);
+  });
+  document.getElementById('setSummary').firstChild.nodeValue =
+    anyGuess ? 'Listlar va ustunlar — avtomatik aniqlandi, tekshiring' : 'Listlar va ustunlar';
+  if(K&&Q){
+    document.getElementById('srcK').textContent=sheets[K.sheetId].name;
+    document.getElementById('srcQ').textContent=sheets[Q.sheetId].name;
+  }
+}
+
+document.getElementById('calc').addEventListener('click',function(){
+  var eb=document.getElementById('calcerr'); eb.innerHTML='';
+  try{
+    if(!K||!Q) throw new Error('Listlar tanlanmagan.');
+    if(K.sheetId===Q.sheetId) throw new Error('Kirim va IQRO uchun bir xil list tanlangan.');
+    [[K,'Kirim'],[Q,'IQRO']].forEach(function(p){
+      if(p[0].map.key<0) throw new Error('Ulash kaliti ustuni tanlanmagan: '+p[1]);
+      if(p[0].map.qty<0) throw new Error('Qoldiq ustuni tanlanmagan: '+p[1]);
+      if(p[0].map.name<0) throw new Error('Tovar nomi ustuni tanlanmagan: '+p[1]);
+    });
+  }catch(e){eb.innerHTML='<div class="errbox">'+esc(e.message)+'</div>';return;}
+  calculate();
+});
+document.getElementById('reset').addEventListener('click',function(){
+  sheets=[];K=Q=result=null;done={};
+  ['maps','calcerr','loaderr'].forEach(function(i){document.getElementById(i).innerHTML='';});
+  document.getElementById('upload').hidden=false;
+  document.getElementById('source').hidden=true;
+  document.getElementById('settings').hidden=true;
+  document.getElementById('settings').open=false;
+  document.getElementById('out').hidden=true;
+  input.value='';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* ---------- hisob ---------- */
+function extract(st){
+  var rows=sheets[st.sheetId].rows, out=[];
+  for(var i=st.headerRow+1;i<rows.length;i++)
+    out.push({line:i+1,key:cleanKey(rows[i][st.map.key]),
+      name:String(rows[i][st.map.name]==null?'':rows[i][st.map.name]).trim(),
+      qty:parseQty(rows[i][st.map.qty])});
+  return out;
+}
+function collapse(rows,warns,where){
+  var m={}, sk={total:0,group:0};
+  rows.forEach(function(r){
+    if(isTotalRow(r.name)){sk.total++;return;}
+    if(!r.key && !isNaN(r.qty) && r.qty!==0 && r.name){
+      sk.group++;
+      warns.push({type:'Guruh/jamlovchi qator — hisobga olinmadi',where:where,line:r.line,name:r.name,key:'—'});return;
+    }
+    if(!r.key){warns.push({type:"Ulash kaliti bo'sh",where:where,line:r.line,name:r.name,key:'—'});return;}
+    if(r.key==='__EXP__'){warns.push({type:'Kod Excelda buzilgan (1,23E+12)',where:where,line:r.line,name:r.name,key:'—'});return;}
+    if(isNaN(r.qty)){warns.push({type:'Miqdor raqam emas',where:where,line:r.line,name:r.name,key:r.key});return;}
+    if(m[r.key]){ m[r.key].qty+=r.qty;
+      warns.push({type:"Kod takrorlangan (qoldiqlar qo'shildi)",where:where,line:r.line,name:r.name,key:r.key});
+    } else m[r.key]={key:r.key,name:r.name,qty:r.qty};
+  });
+  return {m:m,sk:sk};
+}
+function calculate(){
+  var warns=[];
+  var a=collapse(extract(K),warns,'Kirim'), b=collapse(extract(Q),warns,'IQRO');
+  var kirim=a.m, iqro=b.m;
+  var kerak=[],ortiq=[];
+  Object.keys(kirim).forEach(function(k){
+    var x=kirim[k]; if(x.qty<=0) return;
+    var y=iqro[k];
+    if(!y) kerak.push({key:k,name:x.name,kirim:x.qty,holat:'absent'});
+    else if(y.qty<=0) kerak.push({key:k,name:x.name||y.name,kirim:x.qty,holat:'zero'});
+  });
+  Object.keys(iqro).forEach(function(k){
+    if(!kirim[k] && iqro[k].qty>0) ortiq.push({key:k,name:iqro[k].name,iqro:iqro[k].qty});
+  });
+  kerak.sort(function(x,y){return y.kirim-x.kirim;});
+  done={};
+  result={kerak:kerak,warns:warns,ortiq:ortiq,
+    nKirim:Object.keys(kirim).length,nIqro:Object.keys(iqro).length,
+    kirimPos:Object.keys(kirim).filter(function(k){return kirim[k].qty>0;}).length,
+    skipTotal:a.sk.total+b.sk.total, skipGroup:a.sk.group+b.sk.group};
+  render();
+}
+
+/* ---------- chiqarish ---------- */
+function render(){
+  var r=result;
+  var absent=r.kerak.filter(function(x){return x.holat==='absent';}).length;
+  var zero=r.kerak.length-absent;
+  var units=r.kerak.reduce(function(a,x){return a+x.kirim;},0);
+  var bor=r.kirimPos-r.kerak.length;
+  var qoplam=r.kirimPos?Math.round(bor/r.kirimPos*100):0;
+
+  document.getElementById('bignum').innerHTML=fmt(r.kerak.length)+"<small>ta tovar ko'chirilishi kerak</small>";
+  document.getElementById('slipsub').innerHTML=
+    'Kirimda qoldig\'i bor '+fmt(r.kirimPos)+' ta tovardan '+fmt(r.kerak.length)+' tasi IQRO javonida yo\'q. '
+    +'Jami <b>'+fmt(units)+'</b> dona ko\'chirish mumkin.'
+    +(r.warns.length?' <b style="color:var(--warn)">'+fmt(r.warns.length)+' ta qator hisobga olinmadi</b> — «Tekshirish kerak» bo\'limiga qarang.':'');
+
+  var st=[
+    ['','Kirimda qoldig\'i bor tovarlar',fmt(r.kirimPos),'jami '+fmt(r.nKirim)+' ta kod o\'qildi'],
+    ['var(--ok)','IQRO javonida bor',fmt(bor),qoplam+'% qoplam'],
+    ['var(--warn)','IQROda qoldiq 0',fmt(zero),'javonda tugagan'],
+    ['var(--bad)','IQROda umuman yo\'q',fmt(absent),'hisobotda qator yo\'q'],
+    ['','Ko\'chiriladigan dona',fmt(units),'Kirim qoldig\'i bo\'yicha'],
+    ['','IQROda o\'qilgan kodlar',fmt(r.nIqro),''],
+    ['','Faqat IQROda',fmt(r.ortiq.length),'Kirimda yo\'q'],
+    ['','Hisobga olinmagan qatorlar',fmt(r.warns.length),r.skipGroup?fmt(r.skipGroup)+' tasi guruh sarlavhasi':''],
+    ['','«Итого» qatorlari',fmt(r.skipTotal),'tashlab yuborildi']
+  ];
+  document.getElementById('statsTable').innerHTML=st.map(function(x){
+    return '<tr><td class="m">'+(x[0]?'<span class="dot" style="background:'+x[0]+'"></span>':'<span class="dot" style="background:transparent"></span>')+x[1]+'</td>'
+      +'<td class="v">'+x[2]+'</td><td class="d">'+x[3]+'</td></tr>';
+  }).join('');
+
+  document.getElementById('charts').innerHTML=chartCoverage(bor,zero,absent)+chartBuckets(r.kerak)+chartTop(r.kerak);
+  document.getElementById('c-kerak').textContent=r.kerak.length;
+  document.getElementById('c-warn').textContent=r.warns.length;
+  document.getElementById('c-ortiq').textContent=r.ortiq.length;
+  document.getElementById('out').hidden=false;
+  renderPanel();
+}
+
+function chartCoverage(bor,zero,absent){
+  var tot=bor+zero+absent||1,W=560,H=54,x=0;
+  var segs=[[bor,'var(--ok)','IQROda bor'],[zero,'var(--warn)','Qoldiq 0'],[absent,'var(--bad)',"Umuman yo'q"]];
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" role="img" aria-label="Javon qoplami">';
+  segs.forEach(function(g){var w=g[0]/tot*W;if(w<=0)return;
+    s+='<rect x="'+x+'" y="10" width="'+Math.max(w-2,1)+'" height="26" rx="2" fill="'+g[1]+'"/>';
+    if(w>52) s+='<text x="'+(x+8)+'" y="28" font-size="12" fill="#fff" font-weight="600">'+Math.round(g[0]/tot*100)+'%</text>';
+    x+=w;});
+  s+='</svg>';
+  return '<div class="chart" style="grid-column:1/-1"><h3>Javon qoplami</h3><p class="cap">Kirimda qoldig\'i bor har bir tovar IQRO javonida qaysi holatda</p>'+s
+    +'<div class="legend">'+segs.map(function(g){return '<span><i style="background:'+g[1]+'"></i>'+g[2]+' · '+fmt(g[0])+'</span>';}).join('')+'</div></div>';
+}
+function chartBuckets(kerak){
+  var defs=[['1 dona',function(q){return q===1;}],['2–3',function(q){return q>=2&&q<=3;}],
+            ['4–10',function(q){return q>=4&&q<=10;}],['11–50',function(q){return q>=11&&q<=50;}],['50+',function(q){return q>50;}]];
+  var vals=defs.map(function(d){return kerak.filter(function(x){return d[1](x.kirim);}).length;});
+  var max=Math.max.apply(null,vals.concat([1]));
+  var W=460,H=210,bw=58,gap=28,x0=44,base=160;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img">';
+  s+='<line x1="'+x0+'" y1="'+base+'" x2="'+(W-10)+'" y2="'+base+'" stroke="var(--rule)"/>';
+  vals.forEach(function(v,i){var h=v/max*120,x=x0+i*(bw+gap),y=base-h;
+    s+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+Math.max(h,1)+'" rx="2" fill="var(--ok)" opacity="'+(0.45+0.11*i)+'"/>';
+    s+='<text x="'+(x+bw/2)+'" y="'+(y-7)+'" font-size="12" text-anchor="middle" font-weight="600" fill="var(--ink)">'+v+'</text>';
+    s+='<text x="'+(x+bw/2)+'" y="'+(base+18)+'" font-size="11" text-anchor="middle">'+defs[i][0]+'</text>';});
+  s+='<text x="'+x0+'" y="'+(base+42)+'" font-size="10.5">Kirimdagi qoldiq miqdori</text></svg>';
+  return '<div class="chart"><h3>Nechtadan ko\'chiriladi</h3><p class="cap">Chapdagi ustun katta bo\'lsa — javon 1 donadan to\'ladi va tez bo\'shaydi. Bu ta\'minot muammosi.</p>'+s+'</div>';
+}
+function chartTop(kerak){
+  var top=kerak.slice(0,12);
+  if(!top.length) return '<div class="chart"><h3>Birinchi ko\'chiriladiganlar</h3><p class="cap">Ro\'yxat bo\'sh.</p></div>';
+  var max=top[0].kirim||1,rowH=26,H=top.length*rowH+30,W=520,lw=210;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img">';
+  top.forEach(function(t,i){var y=i*rowH+14,bw=(t.kirim/max)*(W-lw-58);
+    var nm=t.name||t.key; if(nm.length>30) nm=nm.slice(0,29)+'…';
+    s+='<text x="0" y="'+(y+13)+'" font-size="11.5" class="lbl">'+esc(nm)+'</text>';
+    s+='<rect x="'+lw+'" y="'+(y+3)+'" width="'+Math.max(bw,2)+'" height="15" rx="2" fill="'+(t.holat==='absent'?'var(--bad)':'var(--warn)')+'"/>';
+    s+='<text x="'+(lw+Math.max(bw,2)+7)+'" y="'+(y+15)+'" font-size="11.5" font-weight="600" fill="var(--ink)">'+fmt(t.kirim)+'</text>';});
+  s+='</svg>';
+  return '<div class="chart"><h3>Birinchi ko\'chiriladiganlar</h3><p class="cap">Kirimda eng ko\'p qoldiq turgan 12 ta tovar.</p>'+s
+    +'<div class="legend"><span><i style="background:var(--bad)"></i>Umuman yo\'q</span><span><i style="background:var(--warn)"></i>Qoldiq 0</span></div></div>';
+}
+
+/* ---------- jadval ---------- */
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected','false');});
+    t.setAttribute('aria-selected','true'); activeTab=t.dataset.tab; renderPanel();
+  });
+});
+document.getElementById('search').addEventListener('input',renderPanel);
+document.getElementById('print').addEventListener('click',function(){window.print();});
+
+function filtered(){
+  var q=norm(document.getElementById('search').value), rows=result[activeTab]||[];
+  if(!q) return rows;
+  return rows.filter(function(r){return norm(r.name).indexOf(q)!==-1||norm(r.key).indexOf(q)!==-1;});
+}
+var TITLES={
+  kerak:["Ko'chirish varaqasi","Sklad Kirimdan IQRO javoniga olib chiqiladigan tovarlar. Ko'chirganingizni belgilab boring."],
+  warn:["Tekshirish kerak","Bu qatorlar hisobga olinmadi. Ularni tashlab yubormang — 1C eksportidagi xatoni tuzatib, faylni qayta yuklang."],
+  ortiq:["Faqat IQROda","IQROda bor, Kirimda yo'q. Odatda normal. Ro'yxat kutilganidan uzun bo'lsa — ulash kaliti noto'g'ri tanlangan."]
+};
+function renderPanel(){
+  if(!result) return;
+  document.getElementById('listTitle').textContent=TITLES[activeTab][0];
+  document.getElementById('listSub').textContent=TITLES[activeTab][1];
+  var rows=filtered(), p=document.getElementById('panel');
+  if(!rows.length){
+    p.innerHTML='<div class="empty">'+(activeTab==='kerak'?'Ko\'chiriladigan tovar yo\'q. Javon to\'la.':'Qator yo\'q.')+'</div>';
+    return;
+  }
+  var h='<div class="tablewrap"><table class="data"><thead><tr>';
+  if(activeTab==='kerak'){
+    h+='<th class="chk"></th><th class="n">№</th><th>Tovar nomi</th><th>Kod</th><th style="text-align:right">Kirimda bor</th><th>IQRO holati</th></tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      h+='<tr data-k="'+esc(r.key)+'"'+(done[r.key]?' class="done"':'')+'>'
+        +'<td class="chk"><input type="checkbox" '+(done[r.key]?'checked':'')+' aria-label="Ko\'chirildi"></td>'
+        +'<td class="n">'+(i+1)+'</td>'
+        +'<td class="nm">'+(esc(r.name)||'<i>nomsiz</i>')+'</td>'
+        +'<td class="bc">'+esc(r.key)+'</td>'
+        +'<td class="qty">'+fmt(r.kirim)+'</td>'
+        +'<td>'+(r.holat==='absent'?'<span class="pill absent">Umuman yo\'q</span>':'<span class="pill zero">Qoldiq 0</span>')+'</td></tr>';
+    });
+  } else if(activeTab==='warn'){
+    h+='<th class="n">№</th><th>Sabab</th><th>List</th><th class="n">Qator</th><th>Tovar</th><th>Kod</th></tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      h+='<tr><td class="n">'+(i+1)+'</td><td>'+esc(r.type)+'</td><td>'+esc(r.where)+'</td><td class="n">'+r.line+'</td><td class="nm">'+esc(r.name)+'</td><td class="bc">'+esc(r.key)+'</td></tr>';
+    });
+  } else {
+    h+='<th class="n">№</th><th>Tovar nomi</th><th>Kod</th><th style="text-align:right">IQROda bor</th></tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      h+='<tr><td class="n">'+(i+1)+'</td><td class="nm">'+(esc(r.name)||'<i>nomsiz</i>')+'</td><td class="bc">'+esc(r.key)+'</td><td class="qty">'+fmt(r.iqro)+'</td></tr>';
+    });
+  }
+  p.innerHTML=h+'</tbody></table></div>';
+
+  if(activeTab==='kerak'){
+    p.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      cb.addEventListener('change',function(){
+        var tr=cb.closest('tr'), k=tr.dataset.k;
+        if(cb.checked){done[k]=true;tr.classList.add('done');} else {delete done[k];tr.classList.remove('done');}
+      });
+    });
+  }
+}
+
+document.getElementById('csv').addEventListener('click',function(){
+  if(!result) return;
+  var rows=filtered(),head,line;
+  if(activeTab==='kerak'){head=['№','Tovar nomi','Kod','Kirimda bor','IQRO holati'];
+    line=function(r,i){return [i+1,r.name,r.key,r.kirim,r.holat==='absent'?'Umuman yoq':'Qoldiq 0'];};}
+  else if(activeTab==='warn'){head=['№','Sabab','List','Qator','Tovar','Kod'];
+    line=function(r,i){return [i+1,r.type,r.where,r.line,r.name,r.key];};}
+  else {head=['№','Tovar nomi','Kod','IQROda bor'];line=function(r,i){return [i+1,r.name,r.key,r.iqro];};}
+  function q(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';}
+  var csv='sep=;\n'+head.map(q).join(';')+'\n'+rows.map(function(r,i){return line(r,i).map(q).join(';');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='iqro-'+activeTab+'-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      reg.addEventListener('updatefound',function(){
+        var nw=reg.installing;
+        nw.addEventListener('statechange',function(){
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            var b=document.createElement('div');
+            b.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#18211D;color:#fff;padding:12px 18px;border-radius:5px;font:500 14px Poppins,sans-serif;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)';
+            b.innerHTML='Yangi versiya tayyor. <button style="margin-left:10px;background:#0F6B52;color:#fff;border:0;border-radius:4px;padding:7px 14px;font:500 13px Poppins,sans-serif;cursor:pointer">Yangilash</button>';
+            b.querySelector('button').onclick=function(){location.reload()};
+            document.body.appendChild(b);
+          }
+        });
+      });
+    }).catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
