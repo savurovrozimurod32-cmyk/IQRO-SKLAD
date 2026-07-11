@@ -100,6 +100,29 @@
   .tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ok)}
   .tab .cnt{font-family:var(--mono);font-size:12px;margin-left:6px}
 
+  /* ---- turkum ---- */
+  .catbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .catbar .lbl{font-size:12px;color:var(--ink-faint);margin-right:2px}
+  .chip{border:1px solid var(--rule);background:#fff;border-radius:20px;padding:6px 13px;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:opacity .12s}
+  .chip .c{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  .chip .sw{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .chip.off{opacity:.4;text-decoration:line-through}
+  .chip[data-cat="__all"],.chip.rulesbtn{border-style:dashed}
+  .chip.rulesbtn{color:var(--ok);border-color:var(--ok)}
+  .hidebanner{background:var(--warn-weak);border-left:3px solid var(--warn);padding:9px 14px;border-radius:0 var(--r) var(--r) 0;font-size:13px;margin-bottom:12px}
+  .cattag{display:inline-block;font-size:11px;font-weight:500;padding:1px 8px;border-radius:20px;background:var(--rule-soft);color:var(--ink-soft);white-space:nowrap}
+  .cattag.none{background:transparent;border:1px dashed var(--rule);color:var(--ink-faint)}
+
+  /* qoida muharriri */
+  .ruleblock{border:1px solid var(--rule);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+  .rulehead{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .rulehead .sw{width:12px;height:12px;border-radius:3px;flex:none}
+  .rulehead input{flex:1;padding:7px 9px;border:1px solid var(--rule);border-radius:4px;font-family:inherit;font-size:14px;font-weight:600}
+  .rulehead button{padding:6px 10px;font-size:12px}
+  .rulekw{width:100%;padding:8px 10px;border:1px solid var(--rule);border-radius:4px;font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);resize:vertical;min-height:38px}
+  .rulekwlabel{font-size:11px;color:var(--ink-faint);margin:0 0 4px}
+  .catmatch{font-size:11px;color:var(--ink-faint);margin-top:5px;font-family:var(--mono)}
+
   .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r)}
   table.data{width:100%;border-collapse:collapse;font-size:14px}
   table.data th{text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);padding:10px;border-bottom:1px solid var(--rule);white-space:nowrap;background:#FBFCFB;position:sticky;top:0}
@@ -218,8 +241,26 @@
         <button class="ghost" id="print">Chop etish</button>
       </div>
     </div>
+    <div class="catbar" id="catbar" hidden></div>
+    <div id="hidebanner"></div>
     <div id="panel"></div>
   </div>
+
+  <details class="settings" id="rulesPanel" hidden>
+    <summary>Turkum qoidalari — kalit so'z bilan</summary>
+    <div class="settings-body">
+      <p class="sub" style="margin-top:14px">Tovar nomida shu so'zlardan biri bo'lsa, u shu turkumga tushadi. Yuqoridan pastga tekshiriladi — birinchi mos kelgan turkum oladi. Kalit so'zlarni vergul bilan ajrating. O'zgarishlar shu brauzerda saqlanadi.</p>
+      <div id="rulesEditor"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="ghost" id="addCat">+ Yangi turkum</button>
+        <button class="primary" id="applyRules">Saqlash va qayta hisoblash</button>
+        <button class="ghost" id="resetRules">Standart qoidalarga qaytarish</button>
+        <button class="ghost" id="exportRules">Qoidalarni saqlab olish</button>
+        <button class="ghost" id="importRules">Qoidalarni yuklash</button>
+        <input type="file" id="importRulesFile" accept=".json" hidden>
+      </div>
+    </div>
+  </details>
 
   <div class="card" id="statsCard">
     <h2>Statistika</h2>
@@ -242,6 +283,48 @@
 "use strict";
 
 var sheets=[], K=null, Q=null, result=null, activeTab='kerak', done={};
+var hiddenCats={};  // yashirilgan turkumlar
+
+// Standart turkum qoidalari — TAXMIN. Foydalanuvchi tahrirlaydi.
+// Tartib muhim: yuqoridagi birinchi mos keladi.
+// Standart turkum qoidalari — haqiqiy IQRO tovar nomlaridan qurilgan.
+var DEFAULT_RULES=[
+  {name:"Ramazon", color:"#A87218", kw:["ramadan","ramazon","ramazan","xurmo","fonus","iftor","saharlik","zafaron","islomiy dasturhon","hilol","ramazon kundaligi"]},
+  {name:"Joynamoz", color:"#6B4C8C", kw:["joynamoz","namaznik","namoznik","sajdaliq","sajdaliq"]},
+  {name:"Tasbeh", color:"#2F7D8C", kw:["tasbeh","tasbih","misbah"]},
+  {name:"Kitob", color:"#0F6B52", kw:["qur`on","quron","kitob","hadis","duo","duosi","dua ","kundalik","kundaligi","muallim","idrok","tarbiya","ensiklopediya","hikmatlar","chahoryor","risola","tafsir","lavh","plakat","kartina","kalima","salovot","iymon","tajvid","yosin","ixlos","suhbat","alifbo","alifba","alifbe","husnixat","daftar","tarixi","alloma","imom ","sahoba","avliyo","ziyorat","ziyoratgoh","axloq","ahloq","gunoh","islom","alloh","rasululloh","siyrat","siyrati","qissa","qisqa","hikoya","o`rganamiz","o`qish","o`qishni","sano","sano ","g`azzoliy","g`azzoli","blaknot","bloknot","book","notes","muqova","qalam","marker","ruchka","stiker","sticky","propis","globus apparat","globus aparat","muzey apparat","muzey aparat","apparat","aparat","diniy","naqshi","to`plam","muslima kundaligi","dunyo","hayoti","nurul","makka","madina davri","al-muallim","al muallim","sirlari","baxtli","buyuk","yurt allomalari"]},
+  {name:"Atir / Mushk", color:"#8C2F5A", kw:["musk","mushk","buxur","parfum","parfyum","atir","osvijitel","asvijitel","osvejitel","osvejit","aroma","isiriq","devona","rolik","komir","shukran","nadir","oud","attar","shalimar","miswak","misvak","shampun","shampon","dabur","vatika","keratin","amla","freshner","freshener","fresh ","svejit","rouge","clive","barakkat","faberlic"]},
+  {name:"Bezak / Bayram", color:"#8C6A2F", kw:["shar","grilyanda","girlyanda","led","party","balloon","fonballoon","yulduz","elektron sham","gemar","bayroq","shamchiroq","osma oy","tiktak","fonar","poveska","svetilnik","svetil","lamp","lampa","gulदasta","girlyand","shar falga"]},
+  {name:"Qishki", color:"#3E6B8C", kw:["ro`mol","romol","rml","sharf","shrf","shrq","shrqia","hijob","hijab","sherst","kashmir","kashemir","angorka","atlas","shifon","arganza","sholk","villur","vilur","batis","batist","duxoba","shapka","telpak","bone","do`ppi","doppi","salla","yaktak","yaxtak","kovush","maxsi","kepka","bosh kiyimi","shapkacha","beretka","balaklava","himara","harir","twill","twil","kashka","maslenniy","maslyanistaya","ecardin","mramr","dagiston","bambuk","garmoshka","tomchi","momiq","kondetsioner ro","knopkali","barxit","rezinka makaron","yengli","ko`ylak","ko`ylagi","valentino","gucci","gucchi","celine","chanel","michael kors","christian dior","louis vuitton","givenchy","hermes","prada","loewe","burberry","elisabetta franchi","loro piano","loro piana","zegna","fabio","jawel","evim cotton","jatka","dm sholk","shoxgul","kletka","yozuvli","dvoynoy","logo","palasa","uchburchak sherst","odnotonniy","brend turkiya ro","kofta","sviter","paxta","mexli","teri mexli","dubay gipyur","gipyur","ipli sherst","kids xb","xebe","bahriya","tigr","tiger","bantik","aylin","havva","chechenka","chechen","kashmirniy"]},
+  {name:"Hadyalik", color:"#8C5A2F", kw:["nabor","hadya","hadiya","sovg`a","sovga","podarok","stol nabor","detski","detskiy","soat","idish","g`ilof","gilof","zamochka","barsetka","paket","spiral nabor","assorti","piramida","pramida","minora","juftlik","qopqoqlik","ring ","uzuk","brelok"]}
+];
+var RULES=loadRules();
+
+function loadRules(){
+  try{
+    var raw=localStorage.getItem('iqro-turkumlar');
+    if(raw){ var p=JSON.parse(raw); if(Array.isArray(p)&&p.length) return p; }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_RULES));
+}
+function saveRules(){
+  try{ localStorage.setItem('iqro-turkumlar', JSON.stringify(RULES)); }catch(e){}
+}
+function categorize(name){
+  var n=' '+norm(name)+' ';
+  for(var i=0;i<RULES.length;i++){
+    var kws=RULES[i].kw;
+    for(var j=0;j<kws.length;j++){
+      var k=norm(kws[j]); if(!k) continue;
+      if(n.indexOf(k)!==-1) return RULES[i].name;
+    }
+  }
+  return '';  // turkumsiz
+}
+function catColor(name){
+  for(var i=0;i<RULES.length;i++) if(RULES[i].name===name) return RULES[i].color;
+  return 'var(--ink-faint)';
+}
 
 var HINTS={
   key:['код','kod','артикул','artikul','штрих','shtrix','штрихкод','barcode','ean','sku'],
@@ -258,7 +341,7 @@ function isTotalRow(n){n=norm(n);if(!n)return false;return TOTAL_WORDS.some(func
 function guessCol(h,kind){for(var i=0;i<h.length;i++){var s=norm(h[i]);if(!s)continue;
   for(var j=0;j<HINTS[kind].length;j++) if(s.indexOf(HINTS[kind][j])!==-1) return i;} return -1;}
 function guessHeaderRow(rows){
-  var best=0,bs=-1;
+  var best=0,bs=-1,bestHit=0;
   for(var i=0;i<Math.min(rows.length,15);i++){
     var f=rows[i].filter(function(c){return String(c||'').trim()!=='';}).length;
     if(f<3) continue;
@@ -266,13 +349,50 @@ function guessHeaderRow(rows){
     var hit=rows[i].filter(function(c){var n=norm(c);
       return HINTS.qty.concat(HINTS.name,HINTS.key).some(function(k){return n.indexOf(k)!==-1;});}).length;
     var sc=f+t*2+hit*6;
-    if(sc>bs){bs=sc;best=i;}
+    if(sc>bs){bs=sc;best=i;bestHit=hit;}
   }
-  return best;
+  return {row:best, hasHeader:bestHit>0};
+}
+// Sarlavha yo'q bo'lsa: ustunlarni mazmun bo'yicha topamiz
+function guessColsByContent(rows, startRow){
+  var ncol=0;
+  for(var i=startRow;i<Math.min(rows.length,startRow+200);i++) ncol=Math.max(ncol, rows[i].length);
+  var digit=[], text=[], numSmall=[], hasComma=[];
+  for(var c=0;c<ncol;c++){ digit[c]=0; text[c]=0; numSmall[c]=0; hasComma[c]=0; }
+  var seen=0;
+  for(var i=startRow;i<Math.min(rows.length,startRow+400);i++){
+    var any=rows[i].some(function(x){return String(x||'').trim()!=='';});
+    if(!any) continue; seen++;
+    for(var c=0;c<ncol;c++){
+      var v=String(rows[i][c]==null?'':rows[i][c]).trim();
+      if(!v) continue;
+      var clean=v.replace(/[\s\u00A0]/g,'');
+      if(/^\d{6,}$/.test(clean)) digit[c]++;
+      if(v.indexOf(',')!==-1 || v.indexOf('.')!==-1) hasComma[c]++;
+      var num=parseFloat(clean.replace(',','.'));
+      if(isFinite(num) && !/^\d{6,}$/.test(clean)){ if(num>0 && num<100000) numSmall[c]++; }
+      if(isNaN(parseFloat(clean.replace(',','.'))) && v.length>=3) text[c]++;
+    }
+  }
+  if(!seen) return {key:-1,name:-1,qty:-1};
+  // kod: eng ko'p uzun raqamli ustun
+  var key=-1,kb=0; for(var c=0;c<ncol;c++) if(digit[c]>kb){kb=digit[c];key=c;}
+  // nom: eng ko'p matnли ustun (koddan boshqa)
+  var name=-1,nb=0; for(var c=0;c<ncol;c++){ if(c===key) continue; if(text[c]>nb){nb=text[c];name=c;} }
+  // qoldiq: kichik butun sonli ustun, narx emas (vergul/nuqta kam), kod va nom emas
+  var qty=-1,qb=-1;
+  for(var c=0;c<ncol;c++){
+    if(c===key||c===name) continue;
+    var priceLike = hasComma[c] > numSmall[c]*0.5;   // narx: ko'p o'nlik
+    var score = numSmall[c] - (priceLike? numSmall[c]*2 : 0);
+    if(score>qb){qb=score;qty=c;}
+  }
+  return {key:key,name:name,qty:qty};
 }
 function cleanKey(v){var s=String(v==null?'':v).trim();if(s.charAt(0)==="'")s=s.slice(1);
   s=s.replace(/[\s\u00A0]/g,'');if(/e\+/i.test(s))return '__EXP__';return s;}
-function parseQty(v){if(v==null)return NaN;var s=String(v).trim();if(s===''||s==='-')return NaN;
+function parseQty(v){if(v==null)return 0;var s=String(v).trim();
+  if(s===''||s==='-'||s==='—')return 0;
   s=s.replace(/[\s\u00A0]/g,'').replace(',','.');var n=parseFloat(s);return isFinite(n)?n:NaN;}
 
 /* ---------- yuklash ---------- */
@@ -350,9 +470,15 @@ function buildSheetPickers(){
 }
 
 function initMap(sid){
-  var rows=sheets[sid].rows, hr=guessHeaderRow(rows), h=rows[hr];
-  var m={key:guessCol(h,'key'),name:guessCol(h,'name'),qty:guessCol(h,'qty')};
-  return {sheetId:sid,headerRow:hr,map:m,guessed:{key:m.key>=0,name:m.name>=0,qty:m.qty>=0}};
+  var rows=sheets[sid].rows, g=guessHeaderRow(rows);
+  if(g.hasHeader){
+    var h=rows[g.row];
+    var m={key:guessCol(h,'key'),name:guessCol(h,'name'),qty:guessCol(h,'qty')};
+    return {sheetId:sid,headerRow:g.row,noHeader:false,map:m,guessed:{key:m.key>=0,name:m.name>=0,qty:m.qty>=0}};
+  }
+  // sarlavha yo'q — 0-qatordan boshlab mazmun bo'yicha
+  var m2=guessColsByContent(rows,0);
+  return {sheetId:sid,headerRow:-1,noHeader:true,map:m2,guessed:{key:m2.key>=0,name:m2.name>=0,qty:m2.qty>=0}};
 }
 
 /* fayl yuklangach avtomatik ishga tushadi */
@@ -384,10 +510,16 @@ function buildMaps(){
   var anyGuess=false;
   [[K,'Sklad Kirim — ombor'],[Q,'Sklad IQRO — savdo zonasi']].forEach(function(p){
     var st=p[0]; if(!st) return;
-    var sh=sheets[st.sheetId], headers=sh.rows[st.headerRow];
+    var sh=sheets[st.sheetId];
+    // sarlavha bo'lsa — shu qator; bo'lmasa — sintetik ustun nomlari
+    var ncol=0; for(var i=0;i<Math.min(sh.rows.length,50);i++) ncol=Math.max(ncol, sh.rows[i].length);
+    var headers = st.noHeader
+      ? Array.apply(null,{length:ncol}).map(function(_,i){return '(ustun '+(i+1)+')';})
+      : sh.rows[st.headerRow];
     var card=el('div','mapcard');
     card.appendChild(el('h3',null,p[1]));
-    card.appendChild(el('p','fn',esc(sh.file)+' → list «'+esc(sh.name)+'» · sarlavha '+(st.headerRow+1)+'-qator'));
+    card.appendChild(el('p','fn',esc(sh.file)+' → list «'+esc(sh.name)+'» · '
+      +(st.noHeader?'sarlavhasiz (ustun tartibi bo\'yicha)':'sarlavha '+(st.headerRow+1)+'-qator')));
     var grid=el('div','grid');
     [['key','Ulash kaliti — Kod / Artikul / Shtrix-kod'],['name','Nomenklatura — tovar nomi'],['qty','Qoldiq / miqdor']].forEach(function(kv){
       var key=kv[0], w=el('div');
@@ -405,14 +537,15 @@ function buildMaps(){
     });
     card.appendChild(grid);
     var pv=el('div','preview'), tb=el('table');
-    for(var r=0;r<Math.min(sh.rows.length,12);r++){
+    var pstart = st.noHeader ? 0 : 0;
+    for(var r=pstart;r<Math.min(sh.rows.length,pstart+12);r++){
       (function(r){
-        var tr=el('tr'); if(r===st.headerRow) tr.className='hdr';
-        tr.title='Sarlavha qatori sifatida belgilash';
+        var tr=el('tr'); if(!st.noHeader && r===st.headerRow) tr.className='hdr';
+        tr.title=st.noHeader?'':'Sarlavha qatori sifatida belgilash';
         tr.appendChild(el('td','rn',String(r+1)));
         for(var c=0;c<Math.min(sh.rows[r].length,9);c++) tr.appendChild(el('td',null,esc(sh.rows[r][c])));
-        tr.addEventListener('click',function(){
-          st.headerRow=r;
+        if(!st.noHeader) tr.addEventListener('click',function(){
+          st.headerRow=r; st.noHeader=false;
           var hh=sh.rows[r];
           st.map={key:guessCol(hh,'key'),name:guessCol(hh,'name'),qty:guessCol(hh,'qty')};
           st.guessed={key:st.map.key>=0,name:st.map.name>=0,qty:st.map.qty>=0};
@@ -421,7 +554,9 @@ function buildMaps(){
         tb.appendChild(tr);
       })(r);
     }
-    pv.appendChild(tb); card.appendChild(pv); maps.appendChild(card);
+    pv.appendChild(tb); card.appendChild(pv);
+    if(st.noHeader) card.appendChild(el('p','catmatch','Bu faylda sarlavha topilmadi — ustunlar mazmun bo\'yicha aniqlandi. Yuqoridan tekshiring.'));
+    maps.appendChild(card);
   });
   document.getElementById('setSummary').firstChild.nodeValue =
     anyGuess ? 'Listlar va ustunlar — avtomatik aniqlandi, tekshiring' : 'Listlar va ustunlar';
@@ -466,14 +601,17 @@ function extract(st){
   return out;
 }
 function collapse(rows,warns,where){
-  var m={}, sk={total:0,group:0};
+  var m={}, sk={total:0,group:0,empty:0};
   rows.forEach(function(r){
     if(isTotalRow(r.name)){sk.total++;return;}
-    if(!r.key && !isNaN(r.qty) && r.qty!==0 && r.name){
-      sk.group++;
-      warns.push({type:'Guruh/jamlovchi qator — hisobga olinmadi',where:where,line:r.line,name:r.name,key:'—'});return;
+    if(!r.key){
+      // kodsiz: qoldiq bo'lsa ogohlantiramiz (ulab bo'lmaydi), qoldiqsizni jim o'tkazamiz
+      if(!isNaN(r.qty) && r.qty>0){
+        sk.group++;
+        warns.push({type:"Kalit yo'q — qo'lda tekshiring",where:where,line:r.line,name:r.name,key:'—'});
+      } else sk.empty++;
+      return;
     }
-    if(!r.key){warns.push({type:"Ulash kaliti bo'sh",where:where,line:r.line,name:r.name,key:'—'});return;}
     if(r.key==='__EXP__'){warns.push({type:'Kod Excelda buzilgan (1,23E+12)',where:where,line:r.line,name:r.name,key:'—'});return;}
     if(isNaN(r.qty)){warns.push({type:'Miqdor raqam emas',where:where,line:r.line,name:r.name,key:r.key});return;}
     if(m[r.key]){ m[r.key].qty+=r.qty;
@@ -496,6 +634,7 @@ function calculate(){
   Object.keys(iqro).forEach(function(k){
     if(!kirim[k] && iqro[k].qty>0) ortiq.push({key:k,name:iqro[k].name,iqro:iqro[k].qty});
   });
+  kerak.forEach(function(x){ x.cat=categorize(x.name); });
   kerak.sort(function(x,y){return y.kirim-x.kirim;});
   done={};
   result={kerak:kerak,warns:warns,ortiq:ortiq,
@@ -541,7 +680,43 @@ function render(){
   document.getElementById('c-warn').textContent=r.warns.length;
   document.getElementById('c-ortiq').textContent=r.ortiq.length;
   document.getElementById('out').hidden=false;
+  document.getElementById('rulesPanel').hidden=false;
+  renderCatbar();
+  renderRulesEditor();
   renderPanel();
+}
+
+/* turkum chiplari */
+function catCounts(){
+  var c={}, none=0;
+  result.kerak.forEach(function(x){ if(x.cat) c[x.cat]=(c[x.cat]||0)+1; else none++; });
+  return {c:c,none:none};
+}
+function renderCatbar(){
+  var bar=document.getElementById('catbar');
+  if(activeTab!=='kerak'){ bar.hidden=true; return; }
+  bar.hidden=false;
+  var cc=catCounts();
+  var order=RULES.map(function(r){return r.name;}).filter(function(n){return cc.c[n];});
+  var html='<span class="lbl">Turkumlar:</span>';
+  order.forEach(function(name){
+    var off=hiddenCats[name];
+    html+='<button class="chip'+(off?' off':'')+'" data-cat="'+esc(name)+'">'
+      +'<span class="sw" style="background:'+catColor(name)+'"></span>'+esc(name)+' <span class="c">'+cc.c[name]+'</span></button>';
+  });
+  if(cc.none) html+='<button class="chip'+(hiddenCats.__none?' off':'')+'" data-cat="__none"><span class="sw" style="background:var(--ink-faint)"></span>Turkumsiz <span class="c">'+cc.none+'</span></button>';
+  html+='<button class="chip rulesbtn" id="openRules">⚙ Qoidalar</button>';
+  bar.innerHTML=html;
+  bar.querySelectorAll('.chip[data-cat]').forEach(function(ch){
+    ch.addEventListener('click',function(){
+      var c=ch.dataset.cat;
+      if(hiddenCats[c]) delete hiddenCats[c]; else hiddenCats[c]=true;
+      renderCatbar(); renderPanel();
+    });
+  });
+  document.getElementById('openRules').addEventListener('click',function(){
+    var rp=document.getElementById('rulesPanel'); rp.open=true; rp.scrollIntoView({behavior:'smooth',block:'center'});
+  });
 }
 
 function chartCoverage(bor,zero,absent){
@@ -590,7 +765,7 @@ function chartTop(kerak){
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected','false');});
-    t.setAttribute('aria-selected','true'); activeTab=t.dataset.tab; renderPanel();
+    t.setAttribute('aria-selected','true'); activeTab=t.dataset.tab; renderCatbar(); renderPanel();
   });
 });
 document.getElementById('search').addEventListener('input',renderPanel);
@@ -598,6 +773,12 @@ document.getElementById('print').addEventListener('click',function(){window.prin
 
 function filtered(){
   var q=norm(document.getElementById('search').value), rows=result[activeTab]||[];
+  if(activeTab==='kerak'){
+    rows=rows.filter(function(r){
+      var c=r.cat?r.cat:'__none';
+      return !hiddenCats[c];
+    });
+  }
   if(!q) return rows;
   return rows.filter(function(r){return norm(r.name).indexOf(q)!==-1||norm(r.key).indexOf(q)!==-1;});
 }
@@ -610,19 +791,36 @@ function renderPanel(){
   if(!result) return;
   document.getElementById('listTitle').textContent=TITLES[activeTab][0];
   document.getElementById('listSub').textContent=TITLES[activeTab][1];
+
+  var hb=document.getElementById('hidebanner'); hb.innerHTML='';
+  if(activeTab==='kerak'){
+    var hiddenNames=Object.keys(hiddenCats);
+    if(hiddenNames.length){
+      var full=result.kerak.length;
+      var shown=result.kerak.filter(function(r){return !hiddenCats[r.cat?r.cat:'__none'];}).length;
+      hb.innerHTML='<div class="hidebanner"><b>'+(full-shown)+' ta tovar yashirilgan</b> — '
+        +hiddenNames.map(function(n){return n==='__none'?'Turkumsiz':esc(n);}).join(', ')
+        +'. Chiplarni qayta bosib ko\'rsating.</div>';
+    }
+  }
+
   var rows=filtered(), p=document.getElementById('panel');
   if(!rows.length){
-    p.innerHTML='<div class="empty">'+(activeTab==='kerak'?'Ko\'chiriladigan tovar yo\'q. Javon to\'la.':'Qator yo\'q.')+'</div>';
+    p.innerHTML='<div class="empty">'+(activeTab==='kerak'?'Bu turkumlarda ko\'chiriladigan tovar yo\'q.':'Qator yo\'q.')+'</div>';
     return;
   }
   var h='<div class="tablewrap"><table class="data"><thead><tr>';
   if(activeTab==='kerak'){
-    h+='<th class="chk"></th><th class="n">№</th><th>Tovar nomi</th><th>Kod</th><th style="text-align:right">Kirimda bor</th><th>IQRO holati</th></tr></thead><tbody>';
+    h+='<th class="chk"></th><th class="n">№</th><th>Tovar nomi</th><th>Turkum</th><th>Kod</th><th style="text-align:right">Kirimda bor</th><th>IQRO holati</th></tr></thead><tbody>';
     rows.forEach(function(r,i){
+      var tag=r.cat
+        ? '<span class="cattag" style="background:'+catColor(r.cat)+'22;color:'+catColor(r.cat)+'">'+esc(r.cat)+'</span>'
+        : '<span class="cattag none">—</span>';
       h+='<tr data-k="'+esc(r.key)+'"'+(done[r.key]?' class="done"':'')+'>'
         +'<td class="chk"><input type="checkbox" '+(done[r.key]?'checked':'')+' aria-label="Ko\'chirildi"></td>'
         +'<td class="n">'+(i+1)+'</td>'
         +'<td class="nm">'+(esc(r.name)||'<i>nomsiz</i>')+'</td>'
+        +'<td>'+tag+'</td>'
         +'<td class="bc">'+esc(r.key)+'</td>'
         +'<td class="qty">'+fmt(r.kirim)+'</td>'
         +'<td>'+(r.holat==='absent'?'<span class="pill absent">Umuman yo\'q</span>':'<span class="pill zero">Qoldiq 0</span>')+'</td></tr>';
@@ -650,11 +848,79 @@ function renderPanel(){
   }
 }
 
+/* ---------- qoida muharriri ---------- */
+function renderRulesEditor(){
+  var box=document.getElementById('rulesEditor'); box.innerHTML='';
+  var counts=result?catCounts().c:{};
+  RULES.forEach(function(rule,idx){
+    var b=el('div','ruleblock');
+    var head=el('div','rulehead');
+    var sw=el('span','sw'); sw.style.background=rule.color; head.appendChild(sw);
+    var nm=document.createElement('input'); nm.value=rule.name; nm.setAttribute('aria-label','Turkum nomi');
+    nm.addEventListener('input',function(){rule.name=nm.value;});
+    head.appendChild(nm);
+    var cnt=el('span','c'); cnt.style.cssText='font-family:var(--mono);font-size:12px;color:var(--ink-faint)';
+    cnt.textContent=(counts[rule.name]||0)+' ta';
+    head.appendChild(cnt);
+    var up=el('button','ghost','↑'); up.title='Yuqoriga'; up.disabled=idx===0;
+    up.addEventListener('click',function(){var t=RULES[idx-1];RULES[idx-1]=RULES[idx];RULES[idx]=t;renderRulesEditor();});
+    head.appendChild(up);
+    var del=el('button','ghost','O\'chirish');
+    del.addEventListener('click',function(){RULES.splice(idx,1);renderRulesEditor();});
+    head.appendChild(del);
+    b.appendChild(head);
+    b.appendChild(el('p','rulekwlabel','Kalit so\'zlar (vergul bilan):'));
+    var kw=document.createElement('textarea'); kw.className='rulekw'; kw.value=rule.kw.join(', ');
+    kw.addEventListener('input',function(){rule.kw=kw.value.split(',').map(function(s){return s.trim();}).filter(Boolean);});
+    b.appendChild(kw);
+    box.appendChild(b);
+  });
+}
+document.getElementById('addCat').addEventListener('click',function(){
+  var palette=['#A87218','#3E6B8C','#8C6A2F','#0F6B52','#6B4C8C','#8C2F5A','#2F7D8C','#8C5A2F','#4C6B2F'];
+  RULES.push({name:'Yangi turkum',color:palette[RULES.length%palette.length],kw:[]});
+  renderRulesEditor();
+});
+document.getElementById('applyRules').addEventListener('click',function(){
+  RULES=RULES.filter(function(r){return r.name.trim();});
+  saveRules();
+  if(K&&Q){ calculate(); }
+  document.getElementById('rulesPanel').open=false;
+});
+document.getElementById('resetRules').addEventListener('click',function(){
+  RULES=JSON.parse(JSON.stringify(DEFAULT_RULES));
+  saveRules(); renderRulesEditor();
+  if(K&&Q){ calculate(); }
+});
+document.getElementById('exportRules').addEventListener('click',function(){
+  var blob=new Blob([JSON.stringify(RULES,null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='turkum-qoidalari.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+document.getElementById('importRules').addEventListener('click',function(){
+  document.getElementById('importRulesFile').click();
+});
+document.getElementById('importRulesFile').addEventListener('change',function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(ev){
+    try{
+      var p=JSON.parse(ev.target.result);
+      if(!Array.isArray(p)||!p.length||!p[0].name||!p[0].kw) throw new Error('format');
+      RULES=p; saveRules(); renderRulesEditor();
+      if(K&&Q){ calculate(); }
+      alert('Qoidalar yuklandi: '+p.length+' ta turkum.');
+    }catch(err){ alert('Fayl noto\'g\'ri — turkum-qoidalari.json bo\'lishi kerak.'); }
+    e.target.value='';
+  };
+  r.readAsText(f);
+});
+
 document.getElementById('csv').addEventListener('click',function(){
   if(!result) return;
   var rows=filtered(),head,line;
-  if(activeTab==='kerak'){head=['№','Tovar nomi','Kod','Kirimda bor','IQRO holati'];
-    line=function(r,i){return [i+1,r.name,r.key,r.kirim,r.holat==='absent'?'Umuman yoq':'Qoldiq 0'];};}
+  if(activeTab==='kerak'){head=['№','Tovar nomi','Turkum','Kod','Kirimda bor','IQRO holati'];
+    line=function(r,i){return [i+1,r.name,r.cat||'',r.key,r.kirim,r.holat==='absent'?'Umuman yoq':'Qoldiq 0'];};}
   else if(activeTab==='warn'){head=['№','Sabab','List','Qator','Tovar','Kod'];
     line=function(r,i){return [i+1,r.type,r.where,r.line,r.name,r.key];};}
   else {head=['№','Tovar nomi','Kod','IQROda bor'];line=function(r,i){return [i+1,r.name,r.key,r.iqro];};}
@@ -669,24 +935,17 @@ document.getElementById('csv').addEventListener('click',function(){
 })();
 </script>
 <script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('sw.js').then(function(reg){
-      reg.addEventListener('updatefound',function(){
-        var nw=reg.installing;
-        nw.addEventListener('statechange',function(){
-          if(nw.state==='installed' && navigator.serviceWorker.controller){
-            var b=document.createElement('div');
-            b.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#18211D;color:#fff;padding:12px 18px;border-radius:5px;font:500 14px Poppins,sans-serif;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)';
-            b.innerHTML='Yangi versiya tayyor. <button style="margin-left:10px;background:#0F6B52;color:#fff;border:0;border-radius:4px;padding:7px 14px;font:500 13px Poppins,sans-serif;cursor:pointer">Yangilash</button>';
-            b.querySelector('button').onclick=function(){location.reload()};
-            document.body.appendChild(b);
-          }
-        });
-      });
-    }).catch(function(){});
-  });
-}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    reg.addEventListener('updatefound',function(){var nw=reg.installing;
+      nw.addEventListener('statechange',function(){
+        if(nw.state==='installed'&&navigator.serviceWorker.controller){
+          var b=document.createElement('div');
+          b.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#18211D;color:#fff;padding:12px 18px;border-radius:5px;font:500 14px Poppins,sans-serif;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)';
+          b.innerHTML='Yangi versiya tayyor. <button style="margin-left:10px;background:#0F6B52;color:#fff;border:0;border-radius:4px;padding:7px 14px;font:500 13px Poppins,sans-serif;cursor:pointer">Yangilash</button>';
+          b.querySelector('button').onclick=function(){location.reload()};document.body.appendChild(b);
+        }});});
+  }).catch(function(){});});}
 </script>
 </body>
 </html>

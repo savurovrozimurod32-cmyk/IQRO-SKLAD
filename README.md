@@ -77,3 +77,24 @@ O'rnatilgach internetsiz ochiladi.
 - Miqdor raqam bo'lmasa, qator 0 deb hisoblanmaydi.
 
 Har biri «Tekshirish kerak» ro'yxatiga yoziladi. Jim xato yo'q.
+
+---
+
+## Turkumlash (kalit so'z bilan)
+
+Dastur tovar nomidan turkumni topadi: Ramazon, Qishki, Kitob, Joynamoz, Atir/Mushk,
+Tasbeh, Bezak/Bayram, Hadyalik. Qoidalar haqiqiy katalog (15 000+ nom) tahlilidan olingan.
+
+- Ro'yxat ustidagi chiplarni bosib turkumni yashirasiz/ko'rsatasiz.
+- «⚙ Qoidalar» — kalit so'zlarni tahrirlaysiz, brauzerda saqlanadi.
+- Nomidan aniq bilib bo'lmagan tovarlar (asosan kitob sarlavhalari) "Turkumsiz" bo'lib
+  qoladi — ular yashirilmaydi, siz ko'rib qo'lda turkum berasiz.
+
+**Diqqat:** turkumlash nom bo'yicha taxmin, 100% aniq emas. Yashirilgan turkumni
+har hafta bir marta ochib, ichida kerakli tovar yo'qligini tekshiring.
+
+## Sarlavhasiz fayl
+
+1C eksportida ustun sarlavhalari bo'lmasa, dastur ustunlarni mazmun bo'yicha topadi
+(uzun raqam = kod, matn = nom, kichik son = qoldiq). Yuqorida tekshiring.
+Bo'sh qoldiq katagi = 0 (xato emas).

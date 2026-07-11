@@ -3,7 +3,7 @@
    - index.html: avval tarmoq. Sayt yangilansa, darhol yangi versiya keladi.
    - xlsx kutubxonasi va ikonkalar: avval kesh. 881 KB har safar yuklanmaydi.
    VERSIYA o'zgarsa, eski kesh o'chiriladi. */
-const VERSIYA = 'iqro-v1';
+const VERSIYA = 'iqro-v3';
 const ASOSIY = ['./', './index.html', './xlsx.full.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
