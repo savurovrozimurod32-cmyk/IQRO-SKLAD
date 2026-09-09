@@ -1,0 +1,36 @@
+# Render Cron Job blueprint — TAMUR Weather Bot
+# 09:00 Asia/Tashkent = 04:00 UTC (O'zbekistonda DST yo'q).
+# Sirlarni (token/key) Render dashboard'da Environment sifatida qo'ying,
+# bu faylga yozmang.
+services:
+  - type: cron
+    name: tamur-weather-bot
+    runtime: node
+    schedule: "0 4 * * *"
+    rootDir: tamur-weather-bot
+    buildCommand: npm ci
+    startCommand: npm run send:daily
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WEATHER_CITY
+        value: Buxoro
+      - key: WEATHER_LAT
+        value: "39.7747"
+      - key: WEATHER_LON
+        value: "64.4286"
+      - key: WEATHER_TIMEZONE
+        value: Asia/Tashkent
+      - key: MIN_SUCCESSFUL_SOURCES
+        value: "2"
+      # --- Quyidagilarni dashboard'da qo'lda kiriting (sync: false) ---
+      - key: WEATHERAPI_KEY
+        sync: false
+      - key: MET_USER_AGENT
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: ADMIN_CHAT_ID
+        sync: false

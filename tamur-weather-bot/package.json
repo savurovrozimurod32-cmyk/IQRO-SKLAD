@@ -1,0 +1,35 @@
+{
+  "name": "tamur-weather-bot",
+  "version": "1.0.0",
+  "description": "TAMUR Buxoro daily weather card generator and Telegram sender",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "fetch:test": "tsx src/scripts/fetchTest.ts",
+    "preview": "tsx src/scripts/preview.ts",
+    "send:test": "tsx src/scripts/sendTest.ts",
+    "send:daily": "tsx src/index.ts",
+    "send:daily:compiled": "node dist/index.js",
+    "telegram:updates": "tsx src/scripts/getUpdates.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "dotenv": "^16.4.7",
+    "sharp": "^0.33.5",
+    "tsx": "^4.19.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
