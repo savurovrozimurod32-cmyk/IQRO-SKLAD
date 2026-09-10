@@ -1,12 +1,15 @@
 # TAMUR Weather Bot — Buxoro ob-havo
 
-Har kuni soat **09:00 (Asia/Tashkent)** da Buxoro shahri uchun 3 ta mustaqil
-ob-havo manbasining ma'lumotini oladi va ularni **alohida 3 ta karta** sifatida
-bitta professional PNG ichida TAMUR Telegram guruhiga avtomatik yuboradi.
+Har kuni soat **09:00 (Asia/Tashkent)** da Buxoro shahri uchun **2 mustaqil
+manbaning bugungi SOATBAY prognozini** (09:00–23:00) oladi va ularni bitta uzun
+premium PNG **jadval** ichida TAMUR Telegram guruhiga avtomatik yuboradi.
 
 > **Muhim:** manbalar **median/consensus qilinmaydi va birlashtirilmaydi**.
-> Har manba (Open-Meteo, MET Norway, WeatherAPI) o'z ma'lumotini rasmda
-> mustaqil ko'rsatadi — foydalanuvchi 3 prognozni yonma-yon taqqoslaydi.
+> Har soat uchun Open-Meteo va WeatherAPI qiymatlari **alohida ustunda** ko'rinadi
+> — foydalanuvchi 2 prognozni yonma-yon taqqoslaydi.
+>
+> MET Norway adapteri kodda saqlangan (`src/sources/metNorway.ts`), lekin
+> **production oqimidan chiqarilgan** — endi faqat Open-Meteo + WeatherAPI.
 
 Bu servis **faqat ob-havo** uchun. Savdo, analitika yoki boshqa biznes
 funksiyalari yo'q.
@@ -16,40 +19,43 @@ funksiyalari yo'q.
 ## 1. Project purpose
 
 - Har kuni 09:00 da avtomatik ishga tushadi (tashqi cron).
-- 3 manba: Open-Meteo, MET Norway, WeatherAPI.com — nomlari rasmda **ko'rsatiladi**
-  (3 prognoz farqini ko'rish uchun). URL/debug/raw ma'lumot ko'rsatilmaydi.
-- Consensus/median YO'Q — 3 ta alohida karta.
-- 1080×1350 PNG karta (TAMUR dizayn tizimi, lokal Poppins font, vektor ikonlar).
+- 2 manba: Open-Meteo va WeatherAPI.com — nomlari rasmda **ko'rsatiladi** (ustun
+  sarlavhasi). URL/debug/raw ma'lumot ko'rsatilmaydi.
+- **Soatbay jadval:** 09:00–23:00 = 15 qator. Har soat: vaqt · temperatura ·
+  condition (ikon) · yomg'ir ehtimoli · shamol. Merge/consensus YO'Q.
+- Katta "current" hero temperatura YO'Q — asosiy element jadval.
+- 1080×2400 uzun PNG (TAMUR navy+copper, lokal Poppins font, vektor kunduz/tun ikonlar).
 - Telegram `sendPhoto` orqali yuborish, retry va admin ogohlantirish bilan.
-- **Failure qoidasi:** 3/3, 2/3 yoki 1/3 — ishlagan manbalar chiqadi, ishlamagani
-  kartada "Ma'lumot olinmadi" bo'ladi. Faqat **0/3** bo'lsa rasm yuborilmaydi.
+- **Failure qoidasi:** 2/2 yoki 1/2 — ishlagan manba ustuni real data, ikkinchisida
+  "Ma'lumot olinmadi". Faqat **0/2** bo'lsa rasm yuborilmaydi.
 
 ## 2. Architecture
 
 ```
 src/
   config/env.ts          Zod bilan env validatsiya
-  sources/               3 provider adapter (openMeteo, metNorway, weatherApi) +
-                         http (timeout/retry) + index (fetchAllSources, shouldSend)
-  weather/               types (SOURCE_DISPLAY_NAME/ORDER), conditions (mapping),
-                         normalize (sonli yordamchilar), sample (preview/test fixture)
-  design/                theme (rang/o'lcham), icons (vektor SVG),
-                         renderWeatherCard (3 karta -> SVG -> PNG)
+  sources/               openMeteoHourly, weatherApiHourly + http (timeout/retry)
+                         + index (fetchHourlySources, shouldSend)
+                         metNorway.ts — saqlangan, lekin production'da ishlatilmaydi
+  weather/               types (Hourly* modellar), conditions (mapping),
+                         hourly (09:00–23:00 oyna, yordamchilar), normalize,
+                         hourlySample (preview/test fixture)
+  design/                theme (rang), icons (vektor SVG, tun/moon),
+                         renderHourlyCard (2 ustunli jadval -> SVG -> PNG)
   telegram/sendPhoto.ts  sendPhoto + admin xabar, retry bilan
-  jobs/dailyWeather.ts   to'liq oqim: fetch -> 3 karta render -> telegram
+  jobs/dailyWeather.ts   to'liq oqim: fetch hourly -> jadval render -> telegram
   scripts/               fetchTest, preview, sendTest, getUpdates
   index.ts               production entrypoint (npm run send:daily)
 assets/fonts/            Poppins (OFL) — runtime'da internetdan yuklanmaydi
 ```
 
-Oqim: **3 provider fetch → normalize → 3 karta render → PNG → Telegram**.
-Har bir qatlam mustaqil.
+Oqim: **2 manba soatbay fetch → normalize → jadval render → PNG → Telegram**.
 
 ## 3. Requirements
 
 - Node.js **20+** (22 tavsiya etiladi)
 - npm
-- Internet chiqishi: `api.open-meteo.com`, `api.met.no`, `api.weatherapi.com`, `api.telegram.org`
+- Internet chiqishi: `api.open-meteo.com`, `api.weatherapi.com`, `api.telegram.org`
 
 ## 4. Installation
 
@@ -68,12 +74,12 @@ cp .env.example .env   # keyin .env ni to'ldiring
 | `WEATHER_CITY` | Shahar nomi (default `Buxoro`) |
 | `WEATHER_LAT` / `WEATHER_LON` | Koordinatalar (default Buxoro) |
 | `WEATHER_TIMEZONE` | `Asia/Tashkent` (server UTC bo'lsa ham shu ishlatiladi) |
-| `WEATHERAPI_KEY` | WeatherAPI.com kaliti (bo'sh bo'lsa bu provider o'chadi) |
-| `MET_USER_AGENT` | MET Norway uchun **haqiqiy aloqali** User-Agent (majburiy) |
+| `WEATHERAPI_KEY` | WeatherAPI.com kaliti (bo'sh bo'lsa faqat Open-Meteo ishlaydi = 1/2, post baribir yuboriladi) |
+| `MET_USER_AGENT` | (Legacy) MET Norway adapteri uchun; production'da ishlatilmaydi |
 | `TELEGRAM_BOT_TOKEN` | BotFather'dan olingan token |
 | `TELEGRAM_CHAT_ID` | Guruh chat ID (odatda `-100...`) |
 | `ADMIN_CHAT_ID` | Ixtiyoriy: xatolik ogohlantirishlari shu chatga boradi |
-| `MIN_SUCCESSFUL_SOURCES` | Rasm yuborish uchun kamida nechta manba ishlashi kerak (default `1` — faqat 0/3 bo'lsa yuborilmaydi) |
+| _(threshold yo'q)_ | Qoida kodda qat'iy: faqat **0/2** bo'lsa yuborilmaydi |
 | `REQUEST_TIMEOUT_MS` | Har bir so'rov timeouti (default `9000`) |
 | `REQUEST_MAX_ATTEMPTS` | Har bir so'rov urinishlari (default `3`) |
 
@@ -84,7 +90,7 @@ cp .env.example .env   # keyin .env ni to'ldiring
 ```bash
 npm run preview             # real ob-havo (imkonsiz bo'lsa fixture) -> output/preview.png
 npm run preview -- --fixture    # doim namunaviy ma'lumot bilan
-npm run preview -- --variants   # 3/3, 2/3, 1/3 failure variantlari -> output/preview-*of3.png
+npm run preview -- --variants   # 2/2 va 1/2 failure variantlari -> output/preview-*of2.png
 ```
 
 `output/preview*.png` yaratiladi. Telegram ga hech narsa yuborilmaydi.
@@ -111,15 +117,15 @@ chatlarning `title`, `id`, `type` sini ko'rsatadi (token/sir chiqmaydi).
 2. Dashboard'dan API key oling.
 3. `.env` da `WEATHERAPI_KEY=...` qiling.
 
-Key bo'lmasa — servis yiqilmaydi, faqat 2 manba (Open-Meteo + MET Norway) bilan ishlaydi.
+Key bo'lmasa — servis yiqilmaydi, faqat Open-Meteo bilan (1/2) ishlaydi va post baribir yuboriladi.
 
 ## 10. Test
 
 ```bash
 npm test          # barcha avtomatik testlar (Vitest)
 npm run typecheck # TypeScript tekshiruvi
-npm run fetch:test  # 3 providerdan real ma'lumot olib console'da normalize natijani ko'rsatadi
-npm run send:test   # Telegram guruhga TEST kartasi yuboradi (real yoki fixture)
+npm run fetch:test  # 2 manbadan real SOATBAY prognozni olib console'da ko'rsatadi
+npm run send:test   # Telegram guruhga TEST soatbay jadval yuboradi (kamida 1 real manba shart)
 ```
 
 ## 11. Build
@@ -161,10 +167,9 @@ Muvaffaqiyatli yuborilsa job `exit 0`, yuborilmasa (yetarli manba yo'q / xato)
 | Belgi | Sabab / yechim |
 |---|---|
 | `Host not in allowlist` (403) | Server egress'ida ob-havo/telegram hostlari ochilmagan. Hostlarni ruxsat bering. |
-| MET Norway `403` | `MET_USER_AGENT` noto'g'ri yoki bo'sh. Haqiqiy aloqali User-Agent qo'ying. |
-| WeatherAPI `401/403` | `WEATHERAPI_KEY` noto'g'ri/muddati tugagan. |
+| WeatherAPI `401/403` | `WEATHERAPI_KEY` noto'g'ri/muddati tugagan. Open-Meteo baribir 1/2 bilan ishlaydi. |
 | Telegram `400` | `TELEGRAM_CHAT_ID` yoki token noto'g'ri. Botni guruhga qo'shganingizni tekshiring. |
-| `post bloklandi: Yetarli manba yo'q` | 0/3 manba ishladi — bu ataylab: bo'sh/noto'g'ri rasm yuborilmaydi. |
+| `post bloklandi` | 0/2 manba ishladi — bu ataylab: bo'sh/noto'g'ri rasm yuborilmaydi. |
 | Font/harflar noto'g'ri | `assets/fonts/` to'liq emas. Poppins TTF fayllari joyida ekanini tekshiring. |
 | Rasm buzuq | Render fail — bunday holatda Telegram ga yuborilmaydi (log'ga qarang). |
 

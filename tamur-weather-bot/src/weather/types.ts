@@ -51,3 +51,34 @@ export interface WeatherSourceResult {
   success: boolean;
   error?: string;
 }
+
+// ───────────────────────── HOURLY (final talab) ─────────────────────────
+// Production oqim endi soatbay prognozga asoslanadi (current/daily emas).
+// Faqat 2 manba: Open-Meteo va WeatherAPI. Merge/consensus YO'Q.
+
+export type HourlySourceId = 'open-meteo' | 'weatherapi';
+
+/** Bitta soat uchun prognoz nuqtasi. */
+export interface HourlyForecastPoint {
+  time: string; // "HH:mm" (Asia/Tashkent local)
+  temperatureC: number | null;
+  condition: WeatherCondition;
+  precipitationProbability: number | null; // 0-100
+  windSpeedKmh: number | null;
+}
+
+/** Bitta manbaning bugungi soatbay natijasi. */
+export interface HourlySourceResult {
+  source: HourlySourceId;
+  date: string; // "YYYY-MM-DD" (Asia/Tashkent)
+  hourly: HourlyForecastPoint[];
+  success: boolean;
+  error?: string;
+}
+
+/** Rasmdagi ustunlar doimo shu tartibda: Open-Meteo, keyin WeatherAPI. */
+export const HOURLY_SOURCE_ORDER: HourlySourceId[] = ['open-meteo', 'weatherapi'];
+
+/** Soatbay oyna: 09:00 dan 23:00 gacha (15 ta soat). */
+export const HOURLY_START_HOUR = 9;
+export const HOURLY_END_HOUR = 23;

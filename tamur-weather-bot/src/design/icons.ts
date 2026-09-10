@@ -9,6 +9,18 @@ import type { WeatherCondition } from '../weather/types.js';
 
 const CREAM = COLORS.cream;
 const COPPER = COLORS.copper;
+const MOON = COLORS.copperSoft;
+
+/** Yarim oy (kechasi "clear" uchun) — 120-box ichida.
+ *  Ikki doira (to'liq + siljitilgan) evenodd bilan ayiriladi -> ishonchli kresent. */
+function moon(cx = 62, cy = 60, r = 30): string {
+  const circle = (x: number, y: number, rr: number): string =>
+    `M ${x - rr} ${y} a ${rr} ${rr} 0 1 0 ${2 * rr} 0 a ${rr} ${rr} 0 1 0 ${-2 * rr} 0 Z`;
+  const carveX = cx + r * 0.55;
+  const carveY = cy - r * 0.32;
+  const carveR = r * 0.95;
+  return `<path fill-rule="evenodd" fill="${MOON}" d="${circle(cx, cy, r)} ${circle(carveX, carveY, carveR)}" />`;
+}
 
 /** Bulut silueti (bir xil rangdagi doiralar + asos birlashib bulut hosil qiladi). */
 function cloud(fill: string, opacity = 0.95): string {
@@ -56,13 +68,13 @@ function flakes(xs: number[], y = 92): string {
     .join('');
 }
 
-export function weatherIconMarkup(condition: WeatherCondition): string {
+export function weatherIconMarkup(condition: WeatherCondition, night = false): string {
   switch (condition) {
     case 'clear':
-      return sun(60, 60, 26);
+      return night ? moon(62, 58, 30) : sun(60, 60, 26);
 
     case 'partly_cloudy':
-      return `${sun(46, 44, 16)}${cloud(CREAM)}`;
+      return night ? `${moon(44, 42, 18)}${cloud(CREAM)}` : `${sun(46, 44, 16)}${cloud(CREAM)}`;
 
     case 'cloudy':
       return cloud(CREAM);

@@ -1,64 +1,42 @@
 import { zonedDateISO } from '../utils/datetime.js';
 import { logger } from '../utils/logger.js';
-import { SOURCE_ORDER } from '../weather/types.js';
-import type { WeatherSourceId, WeatherSourceResult } from '../weather/types.js';
-import { fetchMetNorway } from './metNorway.js';
-import { fetchOpenMeteo } from './openMeteo.js';
-import { fetchWeatherApi } from './weatherApi.js';
+import { HOURLY_SOURCE_ORDER } from '../weather/types.js';
+import type { HourlySourceId, HourlySourceResult } from '../weather/types.js';
+import { fetchOpenMeteoHourly } from './openMeteoHourly.js';
+import { fetchWeatherApiHourly } from './weatherApiHourly.js';
 
-export { fetchOpenMeteo, fetchMetNorway, fetchWeatherApi };
+export { fetchOpenMeteoHourly, fetchWeatherApiHourly };
 
-/** Kutilmagan reject holati uchun "muvaffaqiyatsiz" placeholder karta. */
-function failedPlaceholder(
-  source: WeatherSourceId,
-  timezone: string,
-  error: string,
-): WeatherSourceResult {
-  return {
-    source,
-    fetchedAt: new Date().toISOString(),
-    forecastDate: zonedDateISO(timezone),
-    currentTemperatureC: null,
-    minTemperatureC: null,
-    maxTemperatureC: null,
-    condition: 'unknown',
-    precipitationProbability: null,
-    precipitationMm: null,
-    windSpeedKmh: null,
-    windGustKmh: null,
-    humidityPercent: null,
-    success: false,
-    error,
-  };
+// Eslatma: MET Norway adapteri (`metNorway.ts`) kodda saqlanadi, lekin
+// production oqimdan (fetch/render/log) butunlay chiqarilgan — endi faqat
+// Open-Meteo va WeatherAPI ishlatiladi.
+
+function failedHourly(source: HourlySourceId, date: string, error: string): HourlySourceResult {
+  return { source, date, hourly: [], success: false, error };
 }
 
 /**
- * Uchala providerni parallel va izolatsiyalangan holda chaqiradi.
- * DOIMO 3 ta natija qaytaradi (SOURCE_ORDER tartibida) — shunda rasmda
- * har doim 3 ta karta bo'ladi, ishlamagani "Ma'lumot olinmadi" bo'lib chiqadi.
- * Bir providerning xatosi qolganlariga ta'sir qilmaydi (allSettled).
+ * 2 manbaning bugungi soatbay prognozini parallel va izolatsiyalangan olar.
+ * DOIMO 2 natija qaytaradi (HOURLY_SOURCE_ORDER: open-meteo, keyin weatherapi).
+ * Bir manbaning xatosi ikkinchisiga ta'sir qilmaydi (allSettled).
  */
-export async function fetchAllSources(timezone: string): Promise<WeatherSourceResult[]> {
-  const settled = await Promise.allSettled([
-    fetchOpenMeteo(),
-    fetchMetNorway(),
-    fetchWeatherApi(),
-  ]);
-
+export async function fetchHourlySources(timezone: string): Promise<HourlySourceResult[]> {
+  const date = zonedDateISO(timezone);
+  const settled = await Promise.allSettled([fetchOpenMeteoHourly(), fetchWeatherApiHourly()]);
   return settled.map((s, i) => {
-    const source = SOURCE_ORDER[i] as WeatherSourceId;
+    const source = HOURLY_SOURCE_ORDER[i] as HourlySourceId;
     if (s.status === 'fulfilled') return s.value;
     logger.error('sources', `${source} kutilmagan xatolik: ${String(s.reason)}`);
-    return failedPlaceholder(source, timezone, 'kutilmagan xatolik');
+    return failedHourly(source, date, 'kutilmagan xatolik');
   });
 }
 
-/** Muvaffaqiyatli manbalar soni. */
-export function successCount(sources: WeatherSourceResult[]): number {
-  return sources.filter((s) => s.success).length;
+/** Muvaffaqiyatli (soatbay ma'lumot olingan) manbalar soni. */
+export function successCount(sources: HourlySourceResult[]): number {
+  return sources.filter((s) => s.success && s.hourly.length > 0).length;
 }
 
-/** Final qoida: kamida bitta real manba ishlasa post yuborish mumkin. */
-export function shouldSend(sources: WeatherSourceResult[]): boolean {
+/** Final qoida: kamida bitta manba ishlasa post yuboriladi; 0/2 bo'lsa bloklanadi. */
+export function shouldSend(sources: HourlySourceResult[]): boolean {
   return successCount(sources) > 0;
 }

@@ -3,23 +3,22 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { getEnv } from '../config/env.js';
-import { renderWeatherCardPng } from '../design/renderWeatherCard.js';
-import { fetchAllSources, successCount } from '../sources/index.js';
+import { renderHourlyCardPng } from '../design/renderHourlyCard.js';
+import { fetchHourlySources, successCount } from '../sources/index.js';
 import { zonedDateISO } from '../utils/datetime.js';
 import { errorMessage, logger } from '../utils/logger.js';
-import { orderedSample, withFailures } from '../weather/sample.js';
-import type { WeatherSourceResult } from '../weather/types.js';
+import { orderedHourlySample, withHourlyFailures } from '../weather/hourlySample.js';
+import type { HourlySourceResult } from '../weather/types.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(HERE, '../../output');
 
 /**
  * `npm run preview`
- * Real ob-havoni olishga urinadi; olinmasa namunaviy (fixture) ma'lumot.
+ * Real soatbay ob-havoni olishga urinadi; olinmasa (0/2) namunaviy data.
  * `output/preview.png` yaratadi. Telegram ga yubormaydi.
- *
- * Qo'shimcha variantlar (fixture) failure holatlarini ham chizadi:
- *   --variants  ->  output/preview-3of3.png, preview-2of3.png, preview-1of3.png
+ *   --fixture   -> doim namunaviy data
+ *   --variants  -> output/preview-2of2.png, preview-1of2.png
  */
 async function main(): Promise<void> {
   const env = getEnv();
@@ -27,13 +26,9 @@ async function main(): Promise<void> {
   const date = zonedDateISO(tz);
   await mkdir(OUT_DIR, { recursive: true });
 
-  const save = async (sources: WeatherSourceResult[], file: string): Promise<void> => {
-    // updatedAtLabel berilmaydi -> renderer real Asia/Tashkent vaqtini ishlatadi.
-    const png = await renderWeatherCardPng(sources, {
-      city: env.WEATHER_CITY,
-      date,
-      timezone: tz,
-    });
+  const save = async (sources: HourlySourceResult[], file: string): Promise<void> => {
+    // updatedAtLabel berilmaydi -> real Asia/Tashkent vaqti ishlatiladi.
+    const png = await renderHourlyCardPng(sources, { city: env.WEATHER_CITY, date, timezone: tz });
     const out = resolve(OUT_DIR, file);
     await writeFile(out, png);
     const meta = await sharp(png).metadata();
@@ -41,28 +36,25 @@ async function main(): Promise<void> {
   };
 
   if (process.argv.includes('--variants')) {
-    const base = orderedSample(tz);
-    await save(base, 'preview-3of3.png');
-    await save(withFailures(base, ['weatherapi']), 'preview-2of3.png');
-    await save(withFailures(base, ['met-norway', 'weatherapi']), 'preview-1of3.png');
-    logger.info('preview', 'variantlar yaratildi (output/preview-*of3.png)');
+    const base = orderedHourlySample(tz);
+    await save(base, 'preview-2of2.png');
+    await save(withHourlyFailures(base, ['weatherapi']), 'preview-1of2.png');
+    logger.info('preview', 'variantlar yaratildi (output/preview-*of2.png)');
     return;
   }
 
-  const useFixture = process.argv.includes('--fixture');
-  let sources: WeatherSourceResult[];
-  if (useFixture) {
+  let sources: HourlySourceResult[];
+  if (process.argv.includes('--fixture')) {
     logger.info('preview', 'fixture ma‘lumotidan foydalanilmoqda (--fixture)');
-    sources = orderedSample(tz);
+    sources = orderedHourlySample(tz);
   } else {
-    sources = await fetchAllSources(tz);
+    sources = await fetchHourlySources(tz);
     const ok = successCount(sources);
-    // Yangi qoida: kamida 1 manba ishlasa real preview chiziladi.
     if (ok >= 1) {
-      logger.info('preview', `real ob-havo (${ok}/${sources.length} manba)`);
+      logger.info('preview', `real soatbay ob-havo (${ok}/${sources.length} manba)`);
     } else {
       logger.warn('preview', `real manba yo‘q (0/${sources.length}); fixture ishlatiladi`);
-      sources = orderedSample(tz);
+      sources = orderedHourlySample(tz);
     }
   }
 

@@ -24,8 +24,6 @@ services:
       # --- Quyidagilarni dashboard'da qo'lda kiriting (sync: false) ---
       - key: WEATHERAPI_KEY
         sync: false
-      - key: MET_USER_AGENT
-        sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_CHAT_ID
