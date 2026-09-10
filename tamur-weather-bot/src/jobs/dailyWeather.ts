@@ -15,10 +15,10 @@ export interface DailyResult {
 }
 
 /**
- * To'liq kunlik oqim (yangi talab — consensus YO'Q):
+ * To'liq kunlik oqim (consensus YO'Q):
  *   3 provider fetch -> 3 alohida karta -> PNG -> Telegram.
  * - 0/3 bo'lsa: rasm yuborilmaydi (job fail), admin ogohlantiriladi.
- * - >=1 (MIN_SUCCESSFUL_SOURCES) bo'lsa: yuboriladi; ishlamagan manba
+ * - 1/3, 2/3 yoki 3/3 bo'lsa: yuboriladi; ishlamagan manba
  *   kartada "Ma'lumot olinmadi" bo'lib chiqadi.
  * `dryRun` -> hammasi bajariladi, lekin Telegram yuborilmaydi.
  */
@@ -30,13 +30,15 @@ export async function runDailyWeather(opts: { dryRun?: boolean } = {}): Promise<
 
   const sources = await fetchAllSources(tz);
   for (const s of sources) {
-    if (!s.success) logger.warn(s.source, `failed: ${s.error ?? 'noma‘lum xato'}`);
+    if (!s.success) logger.warn(s.source, `failed: ${s.error ?? 'noma’lum xato'}`);
   }
   const ok = successCount(sources);
   logger.info('sources', `${ok}/${sources.length} sources ok`);
 
-  if (ok < env.MIN_SUCCESSFUL_SOURCES) {
-    const reason = `Yetarli manba yo‘q: ${ok}/${sources.length} (kamida ${env.MIN_SUCCESSFUL_SOURCES})`;
+  // Final talab qat'iy: faqat 0/3 bo'lsa post bloklanadi.
+  // Bu xulq-atvor env orqali tasodifan o'zgartirib yuborilmasin.
+  if (ok === 0) {
+    const reason = `Hech bir ob-havo manbasidan ma’lumot olinmadi: 0/${sources.length}`;
     logger.error('weather', `post bloklandi: ${reason}`);
     await notifyAdmin(`⚠️ Buxoro ob-havo posti yuborilmadi.\nSabab: ${reason}`).catch(() =>
       logger.error('weather', 'admin ogohlantirishi yuborilmadi'),
@@ -56,7 +58,7 @@ export async function runDailyWeather(opts: { dryRun?: boolean } = {}): Promise<
   }
 
   if (opts.dryRun) {
-    logger.info('weather', 'dry-run: Telegram ga yuborilmadi');
+    logger.info('weather', 'dry-run: Telegramga yuborilmadi');
     return { sent: false, blocked: false, successCount: ok, sources };
   }
 
