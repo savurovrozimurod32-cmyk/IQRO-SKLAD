@@ -4,13 +4,12 @@ import { fetchAllSources, successCount } from '../sources/index.js';
 import { sendPhoto } from '../telegram/sendPhoto.js';
 import { zonedDateISO } from '../utils/datetime.js';
 import { errorMessage, logger } from '../utils/logger.js';
-import { orderedSample } from '../weather/sample.js';
 import type { WeatherSourceResult } from '../weather/types.js';
 
 /**
  * `npm run send:test`
- * Telegram guruhga TEST ob-havo kartasini yuboradi (real yoki fixture).
- * Haqiqiy Telegram sozlamalarini talab qiladi.
+ * Telegram guruhga TEST ob-havo kartasini yuboradi.
+ * Muhim: fixture/fake weather yubormaydi — kamida bitta real manba ishlashi shart.
  */
 async function main(): Promise<void> {
   const env = getEnv();
@@ -18,16 +17,19 @@ async function main(): Promise<void> {
   const tz = env.WEATHER_TIMEZONE;
   const date = zonedDateISO(tz);
 
-  let sources: WeatherSourceResult[] = await fetchAllSources(tz);
+  const sources: WeatherSourceResult[] = await fetchAllSources(tz);
   const ok = successCount(sources);
-  if (ok >= env.MIN_SUCCESSFUL_SOURCES) {
-    logger.info('send:test', `real ob-havo (${ok}/${sources.length} manba)`);
-  } else {
-    logger.warn('send:test', `real manba yetarli emas (${ok}/${sources.length}); fixture yuboriladi`);
-    sources = orderedSample(tz);
+
+  if (ok === 0) {
+    throw new Error('TEST yuborilmadi: 0/3 real ob-havo manbasi ishladi. Fake/fixture ma’lumot yuborilmaydi.');
   }
 
-  const png = await renderWeatherCardPng(sources, { city: env.WEATHER_CITY, date, timezone: tz });
+  logger.info('send:test', `real ob-havo (${ok}/${sources.length} manba)`);
+  const png = await renderWeatherCardPng(sources, {
+    city: env.WEATHER_CITY,
+    date,
+    timezone: tz,
+  });
   await sendPhoto(png, 'TEST • Buxoro ob-havo');
   logger.info('send:test', 'test kartasi yuborildi');
 }
