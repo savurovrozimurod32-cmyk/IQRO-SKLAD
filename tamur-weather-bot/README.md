@@ -1,8 +1,12 @@
 # TAMUR Weather Bot — Buxoro ob-havo
 
 Har kuni soat **09:00 (Asia/Tashkent)** da Buxoro shahri uchun 3 ta mustaqil
-ob-havo manbasidan ma'lumot olib, ularni umumlashtirib (consensus), professional
-PNG karta yaratadi va TAMUR Telegram guruhiga avtomatik yuboradi.
+ob-havo manbasining ma'lumotini oladi va ularni **alohida 3 ta karta** sifatida
+bitta professional PNG ichida TAMUR Telegram guruhiga avtomatik yuboradi.
+
+> **Muhim:** manbalar **median/consensus qilinmaydi va birlashtirilmaydi**.
+> Har manba (Open-Meteo, MET Norway, WeatherAPI) o'z ma'lumotini rasmda
+> mustaqil ko'rsatadi — foydalanuvchi 3 prognozni yonma-yon taqqoslaydi.
 
 Bu servis **faqat ob-havo** uchun. Savdo, analitika yoki boshqa biznes
 funksiyalari yo'q.
@@ -12,29 +16,34 @@ funksiyalari yo'q.
 ## 1. Project purpose
 
 - Har kuni 09:00 da avtomatik ishga tushadi (tashqi cron).
-- 3 manba: Open-Meteo, MET Norway, WeatherAPI.com (nomlari rasmda **ko'rsatilmaydi**).
-- Median asosidagi consensus (outlierlarga chidamli).
+- 3 manba: Open-Meteo, MET Norway, WeatherAPI.com — nomlari rasmda **ko'rsatiladi**
+  (3 prognoz farqini ko'rish uchun). URL/debug/raw ma'lumot ko'rsatilmaydi.
+- Consensus/median YO'Q — 3 ta alohida karta.
 - 1080×1350 PNG karta (TAMUR dizayn tizimi, lokal Poppins font, vektor ikonlar).
 - Telegram `sendPhoto` orqali yuborish, retry va admin ogohlantirish bilan.
-- Kamida 2 manba ishlamasa — **rasm yuborilmaydi** (noto'g'ri prognozdan ko'ra yubormaslik afzal).
+- **Failure qoidasi:** 3/3, 2/3 yoki 1/3 — ishlagan manbalar chiqadi, ishlamagani
+  kartada "Ma'lumot olinmadi" bo'ladi. Faqat **0/3** bo'lsa rasm yuborilmaydi.
 
 ## 2. Architecture
 
 ```
 src/
   config/env.ts          Zod bilan env validatsiya
-  sources/               3 provider adapter (openMeteo, metNorway, weatherApi) + http (timeout/retry)
-  weather/               types, conditions (mapping), normalize (median va boshqalar),
-                         consensus (median + condition voting), summary (o'zbekcha)
-  design/                theme (rang/o'lcham), icons (vektor SVG), renderWeatherCard (SVG->PNG)
+  sources/               3 provider adapter (openMeteo, metNorway, weatherApi) +
+                         http (timeout/retry) + index (fetchAllSources, shouldSend)
+  weather/               types (SOURCE_DISPLAY_NAME/ORDER), conditions (mapping),
+                         normalize (sonli yordamchilar), sample (preview/test fixture)
+  design/                theme (rang/o'lcham), icons (vektor SVG),
+                         renderWeatherCard (3 karta -> SVG -> PNG)
   telegram/sendPhoto.ts  sendPhoto + admin xabar, retry bilan
-  jobs/dailyWeather.ts   to'liq oqim: fetch -> consensus -> render -> telegram
+  jobs/dailyWeather.ts   to'liq oqim: fetch -> 3 karta render -> telegram
   scripts/               fetchTest, preview, sendTest, getUpdates
   index.ts               production entrypoint (npm run send:daily)
 assets/fonts/            Poppins (OFL) — runtime'da internetdan yuklanmaydi
 ```
 
-Oqim: **providerlar → consensus → PNG → Telegram**. Har bir qatlam mustaqil.
+Oqim: **3 provider fetch → normalize → 3 karta render → PNG → Telegram**.
+Har bir qatlam mustaqil.
 
 ## 3. Requirements
 
@@ -64,7 +73,7 @@ cp .env.example .env   # keyin .env ni to'ldiring
 | `TELEGRAM_BOT_TOKEN` | BotFather'dan olingan token |
 | `TELEGRAM_CHAT_ID` | Guruh chat ID (odatda `-100...`) |
 | `ADMIN_CHAT_ID` | Ixtiyoriy: xatolik ogohlantirishlari shu chatga boradi |
-| `MIN_SUCCESSFUL_SOURCES` | Kamida nechta manba kerak (default `2`) |
+| `MIN_SUCCESSFUL_SOURCES` | Rasm yuborish uchun kamida nechta manba ishlashi kerak (default `1` — faqat 0/3 bo'lsa yuborilmaydi) |
 | `REQUEST_TIMEOUT_MS` | Har bir so'rov timeouti (default `9000`) |
 | `REQUEST_MAX_ATTEMPTS` | Har bir so'rov urinishlari (default `3`) |
 
@@ -73,11 +82,12 @@ cp .env.example .env   # keyin .env ni to'ldiring
 ## 6. Local preview
 
 ```bash
-npm run preview            # real ob-havo (imkonsiz bo'lsa fixture) -> output/preview.png
-npm run preview -- --fixture   # doim namunaviy ma'lumot bilan
+npm run preview             # real ob-havo (imkonsiz bo'lsa fixture) -> output/preview.png
+npm run preview -- --fixture    # doim namunaviy ma'lumot bilan
+npm run preview -- --variants   # 3/3, 2/3, 1/3 failure variantlari -> output/preview-*of3.png
 ```
 
-`output/preview.png` yaratiladi. Telegram ga hech narsa yuborilmaydi.
+`output/preview*.png` yaratiladi. Telegram ga hech narsa yuborilmaydi.
 
 ## 7. Telegram setup
 
@@ -154,7 +164,7 @@ Muvaffaqiyatli yuborilsa job `exit 0`, yuborilmasa (yetarli manba yo'q / xato)
 | MET Norway `403` | `MET_USER_AGENT` noto'g'ri yoki bo'sh. Haqiqiy aloqali User-Agent qo'ying. |
 | WeatherAPI `401/403` | `WEATHERAPI_KEY` noto'g'ri/muddati tugagan. |
 | Telegram `400` | `TELEGRAM_CHAT_ID` yoki token noto'g'ri. Botni guruhga qo'shganingizni tekshiring. |
-| `post bloklandi: Yetarli manba yo'q` | 2 dan kam manba ishladi — bu ataylab: noto'g'ri prognoz yuborilmaydi. |
+| `post bloklandi: Yetarli manba yo'q` | 0/3 manba ishladi — bu ataylab: bo'sh/noto'g'ri rasm yuborilmaydi. |
 | Font/harflar noto'g'ri | `assets/fonts/` to'liq emas. Poppins TTF fayllari joyida ekanini tekshiring. |
 | Rasm buzuq | Render fail — bunday holatda Telegram ga yuborilmaydi (log'ga qarang). |
 

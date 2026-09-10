@@ -13,6 +13,16 @@ export type WeatherCondition =
 
 export type WeatherSourceId = 'open-meteo' | 'met-norway' | 'weatherapi';
 
+/** Rasmda ko'rsatiladigan manba nomlari (endi yashirilmaydi). */
+export const SOURCE_DISPLAY_NAME: Record<WeatherSourceId, string> = {
+  'open-meteo': 'Open-Meteo',
+  'met-norway': 'MET Norway',
+  weatherapi: 'WeatherAPI',
+};
+
+/** Rasmdagi kartalar doimo shu tartibda chiqadi. */
+export const SOURCE_ORDER: WeatherSourceId[] = ['open-meteo', 'met-norway', 'weatherapi'];
+
 /**
  * Har bir provider o'z API formatini shu yagona modelga normalize qiladi.
  * Mavjud bo'lmagan qiymatlar `null` bo'ladi (consensus ularni chetlab o'tadi).
@@ -40,30 +50,4 @@ export interface WeatherSourceResult {
 
   success: boolean;
   error?: string;
-}
-
-/** Consensusdan chiqadigan yakuniy natija. */
-export interface FinalWeather {
-  city: string;
-  date: string; // "YYYY-MM-DD"
-
-  currentTemperatureC: number;
-
-  minTemperatureC: number;
-  maxTemperatureC: number;
-
-  condition: WeatherCondition;
-
-  precipitationProbability: number | null;
-  precipitationMm: number | null;
-
-  windSpeedKmh: number | null;
-  windGustKmh: number | null;
-
-  humidityPercent: number | null;
-
-  summaryUz: string;
-
-  sourceCount: number; // nechta provider hissa qo'shdi (faqat log/ichki uchun)
-  generatedAt: string; // ISO timestamp
 }

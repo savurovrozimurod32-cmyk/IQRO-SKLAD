@@ -34,7 +34,9 @@ const EnvSchema = z.object({
   TELEGRAM_CHAT_ID: z.string().optional().default(''),
   ADMIN_CHAT_ID: z.string().optional().default(''),
 
-  MIN_SUCCESSFUL_SOURCES: numericString(2).pipe(z.number().int().min(1).max(3)),
+  // Yangi talab: 3 manba alohida ko'rsatiladi. Kamida shuncha manba ishlasa,
+  // rasm yuboriladi. Default 1 — ya'ni faqat 0/3 bo'lsa yuborilmaydi.
+  MIN_SUCCESSFUL_SOURCES: numericString(1).pipe(z.number().int().min(1).max(3)),
 
   REQUEST_TIMEOUT_MS: numericString(9000).pipe(z.number().int().min(1000).max(60000)),
   REQUEST_MAX_ATTEMPTS: numericString(3).pipe(z.number().int().min(1).max(5)),

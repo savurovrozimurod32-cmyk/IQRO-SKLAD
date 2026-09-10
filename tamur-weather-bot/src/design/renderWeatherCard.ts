@@ -5,7 +5,9 @@ import { Resvg } from '@resvg/resvg-js';
 import sharp from 'sharp';
 import { formatUzDate, zonedTimeHHMM } from '../utils/datetime.js';
 import { uzLabel } from '../weather/conditions.js';
-import type { FinalWeather } from '../weather/types.js';
+import { isNum, round, roundTemp } from '../weather/normalize.js';
+import { SOURCE_DISPLAY_NAME } from '../weather/types.js';
+import type { WeatherSourceResult } from '../weather/types.js';
 import { weatherIconMarkup } from './icons.js';
 import { CANVAS, COLORS, FONT_FAMILY, backgroundFor } from './theme.js';
 
@@ -18,15 +20,9 @@ const FONT_FILES = [
   'Poppins-Bold.ttf',
 ].map((f) => resolve(FONT_DIR, f));
 
-/**
- * Font fayllari mavjudligini startupda tekshiramiz — yo'q bo'lsa aniq xato,
- * "sokin fallback" emas (Uzbek harflari noto'g'ri chiqib qolmasin).
- */
 function ensureFonts(): void {
   for (const p of FONT_FILES) {
-    if (!existsSync(p)) {
-      throw new Error(`Font topilmadi: ${p} (assets/fonts to'liq emas)`);
-    }
+    if (!existsSync(p)) throw new Error(`Font topilmadi: ${p} (assets/fonts to'liq emas)`);
   }
 }
 
@@ -59,126 +55,102 @@ function text(x: number, y: number, content: string, o: TextOpts): string {
   return `<text x="${x}" y="${y}" font-family="${FONT_FAMILY}" font-size="${size}" font-weight="${weight}" fill="${fill}" fill-opacity="${opacity}" text-anchor="${anchor}" letter-spacing="${spacing}">${escapeXml(content)}</text>`;
 }
 
-/** Matnni taxminiy kenglik bo'yicha satrlarga bo'ladi (Poppins ~0.5em/belgi). */
-function wrapText(input: string, maxWidth: number, fontSize: number): string[] {
-  const approxCharW = fontSize * 0.5;
-  const maxChars = Math.max(8, Math.floor(maxWidth / approxCharW));
-  const words = input.split(/\s+/);
-  const lines: string[] = [];
-  let cur = '';
-  for (const w of words) {
-    const candidate = cur ? `${cur} ${w}` : w;
-    if (candidate.length > maxChars && cur) {
-      lines.push(cur);
-      cur = w;
-    } else {
-      cur = candidate;
-    }
+const tempStr = (v: number | null): string => (isNum(v) ? `${roundTemp(v)}°` : '—');
+
+function heroTemp(s: WeatherSourceResult): string {
+  const v = s.currentTemperatureC ?? s.maxTemperatureC ?? s.minTemperatureC;
+  return tempStr(v);
+}
+
+function rainStat(s: WeatherSourceResult): string {
+  if (isNum(s.precipitationProbability)) return `${s.precipitationProbability}%`;
+  if (isNum(s.precipitationMm)) return `${round(s.precipitationMm, 1)}mm`;
+  return '—';
+}
+
+/** Bitta manba kartasi (x, y, w, h ichida). */
+function sourceCard(s: WeatherSourceResult, x: number, y: number, w: number, h: number): string {
+  const pad = 36;
+  const name = (SOURCE_DISPLAY_NAME[s.source] ?? s.source).toUpperCase();
+
+  const frame = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="28"
+    fill="${COLORS.cardFill}" stroke="${COLORS.cardStroke}" stroke-width="1.5" />`;
+
+  // Ishlamagan manba — "Ma'lumot olinmadi"
+  if (!s.success) {
+    const cx = x + w / 2;
+    const icon = `<g transform="translate(${x + pad}, ${y + 40}) scale(1.0)" opacity="0.35">${weatherIconMarkup('unknown')}</g>`;
+    return `
+      <g>
+        ${frame}
+        ${text(x + pad, y + 58, name, { size: 30, weight: 700, fill: COLORS.copper, spacing: 2, anchor: 'start', opacity: 0.75 })}
+        ${icon}
+        ${text(cx + 40, y + h / 2 + 24, 'Ma’lumot olinmadi', { size: 34, weight: 500, fill: COLORS.creamMuted })}
+      </g>`;
   }
-  if (cur) lines.push(cur);
-  return lines;
-}
 
-interface StatCard {
-  label: string;
-  value: string;
-  unit?: string;
-}
+  // Ikonka (chap), kondisiya (yonida), katta harorat (o'ng)
+  const icon = `<g transform="translate(${x + pad}, ${y + 74}) scale(1.0)">${weatherIconMarkup(s.condition)}</g>`;
+  const sep = `<line x1="${x + pad}" y1="${y + 196}" x2="${x + w - pad}" y2="${y + 196}" stroke="${COLORS.cardStroke}" stroke-width="1.5" />`;
 
-function statCard(x: number, y: number, w: number, h: number, c: StatCard): string {
-  const cx = x + w / 2;
-  const hasUnit = Boolean(c.unit);
-  const valueY = hasUnit ? y + 78 : y + 84;
-  const unit = hasUnit
-    ? text(cx, y + 104, c.unit as string, {
-        size: 20,
-        weight: 500,
-        fill: COLORS.creamMuted,
-      })
-    : '';
+  // Pastki stat qatori — 5 ustun
+  const innerW = w - 2 * pad;
+  const colW = innerW / 5;
+  const stats: Array<{ label: string; value: string }> = [
+    { label: 'MIN', value: tempStr(s.minTemperatureC) },
+    { label: 'MAX', value: tempStr(s.maxTemperatureC) },
+    { label: 'YOMG‘IR', value: rainStat(s) },
+    { label: 'SHAMOL km/soat', value: isNum(s.windSpeedKmh) ? `${Math.round(s.windSpeedKmh)}` : '—' },
+    { label: 'NAMLIK', value: isNum(s.humidityPercent) ? `${s.humidityPercent}%` : '—' },
+  ];
+  const statMarkup = stats
+    .map((st, i) => {
+      const cx = x + pad + colW * (i + 0.5);
+      return `${text(cx, y + 232, st.label, { size: 17, weight: 600, fill: COLORS.copper, spacing: 1 })}${text(cx, y + 268, st.value, { size: 32, weight: 600, fill: COLORS.cream })}`;
+    })
+    .join('');
+
   return `
     <g>
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="24"
-        fill="${COLORS.cardFill}" stroke="${COLORS.cardStroke}" stroke-width="1.5" />
-      ${text(cx, y + 36, c.label, { size: 22, weight: 600, fill: COLORS.copper, spacing: 3 })}
-      ${text(cx, valueY, c.value, { size: 52, weight: 600, fill: COLORS.cream })}
-      ${unit}
+      ${frame}
+      ${text(x + pad, y + 58, name, { size: 30, weight: 700, fill: COLORS.copper, spacing: 2, anchor: 'start' })}
+      ${icon}
+      ${text(x + pad + 132, y + 150, uzLabel(s.condition), { size: 32, weight: 500, fill: COLORS.copperSoft, anchor: 'start' })}
+      ${text(x + w - pad, y + 96, heroTemp(s), { size: 92, weight: 700, fill: COLORS.cream, anchor: 'end' })}
+      ${sep}
+      ${statMarkup}
     </g>`;
 }
 
-function tempStr(v: number): string {
-  return `${v}°`;
-}
-
 export interface CardRenderOptions {
+  city: string;
+  date: string; // "YYYY-MM-DD"
   timezone: string;
-  /** "Yangilandi • HH:MM" uchun vaqt; berilmasa hozirgi (tz) vaqt olinadi. */
   updatedAtLabel?: string;
 }
 
-/** FinalWeather -> to'liq SVG hujjat (1080×1350). */
-export function buildCardSvg(final: FinalWeather, opts: CardRenderOptions): string {
-  const { width: W, height: H, padding: P } = CANVAS;
+/** 3 ta manba kartasini bitta SVG hujjatga (1080×1350) joylashtiradi. */
+export function buildCardsSvg(sources: WeatherSourceResult[], opts: CardRenderOptions): string {
+  const { width: W, height: H } = CANVAS;
   const cx = W / 2;
-  const bg = backgroundFor(final.condition);
-  const contentW = W - 2 * P;
+  const P = 60;
+  const cardX = P;
+  const cardW = W - 2 * P;
 
-  const dateLabel = formatUzDate(final.date, opts.timezone);
+  const dateLabel = formatUzDate(opts.date, opts.timezone);
   const updated = opts.updatedAtLabel ?? zonedTimeHHMM(opts.timezone);
 
-  // --- Ikonka (120-box -> scale) ---
-  const iconScale = 2.0;
-  const iconBox = 120 * iconScale;
-  const iconX = cx - iconBox / 2;
-  const iconY = 320;
-  const icon = `<g transform="translate(${iconX}, ${iconY}) scale(${iconScale})">${weatherIconMarkup(final.condition)}</g>`;
+  // Fon "kayfiyati" — birinchi ishlagan manbaning holatidan nozik tint
+  // (bu MERGE emas, faqat vizual ohang; kartalar mustaqilligicha qoladi).
+  const firstOk = sources.find((s) => s.success);
+  const bg = backgroundFor(firstOk?.condition ?? 'unknown');
 
-  // --- Stat kartalar ---
-  const gap = 24;
-  // A qatori: MIN | MAX
-  const aW = (contentW - gap) / 2;
-  const aY = 800;
-  const cardA1 = statCard(P, aY, aW, 120, { label: 'MIN', value: tempStr(final.minTemperatureC) });
-  const cardA2 = statCard(P + aW + gap, aY, aW, 120, {
-    label: 'MAX',
-    value: tempStr(final.maxTemperatureC),
-  });
-
-  // B qatori: YOMG‘IR | SHAMOL | NAMLIK
-  const bW = (contentW - 2 * gap) / 3;
-  const bY = 944;
-  const rainVal =
-    final.precipitationProbability !== null
-      ? `${final.precipitationProbability}%`
-      : final.precipitationMm !== null
-        ? `${final.precipitationMm}`
-        : '—';
-  const rainUnit =
-    final.precipitationProbability === null && final.precipitationMm !== null ? 'mm' : undefined;
-  const windVal = final.windSpeedKmh !== null ? `${final.windSpeedKmh}` : '—';
-  const windUnit = final.windSpeedKmh !== null ? 'km/soat' : undefined;
-  const humVal = final.humidityPercent !== null ? `${final.humidityPercent}%` : '—';
-
-  const cardB1 = statCard(P, bY, bW, 120, { label: 'YOMG‘IR', value: rainVal, unit: rainUnit });
-  const cardB2 = statCard(P + bW + gap, bY, bW, 120, {
-    label: 'SHAMOL',
-    value: windVal,
-    unit: windUnit,
-  });
-  const cardB3 = statCard(P + 2 * (bW + gap), bY, bW, 120, { label: 'NAMLIK', value: humVal });
-
-  // --- Xulosa (1-2 satr) ---
-  const summaryLines = wrapText(final.summaryUz, 780, 38).slice(0, 2);
-  const summaryStartY = 1150;
-  const summary = summaryLines
-    .map((line, i) =>
-      text(cx, summaryStartY + i * 50, line, {
-        size: 38,
-        weight: 500,
-        fill: COLORS.cream,
-        opacity: 0.95,
-      }),
-    )
+  // 3 karta vertikal stacked
+  const cardsTop = 330;
+  const gap = 22;
+  const cardH = 298;
+  const cards = sources
+    .map((s, i) => sourceCard(s, cardX, cardsTop + i * (cardH + gap), cardW, cardH))
     .join('');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -188,7 +160,7 @@ export function buildCardSvg(final: FinalWeather, opts: CardRenderOptions): stri
       <stop offset="0" stop-color="${bg.top}" />
       <stop offset="1" stop-color="${bg.bottom}" />
     </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.12" r="0.7">
+    <radialGradient id="glow" cx="0.5" cy="0.1" r="0.7">
       <stop offset="0" stop-color="${bg.glow}" />
       <stop offset="1" stop-color="rgba(0,0,0,0)" />
     </radialGradient>
@@ -198,41 +170,32 @@ export function buildCardSvg(final: FinalWeather, opts: CardRenderOptions): stri
   <rect x="0" y="0" width="${W}" height="${H}" fill="url(#glow)" />
 
   <!-- Header -->
-  ${text(cx, 140, 'TAMUR', { size: 48, weight: 700, fill: COLORS.copper, spacing: 10 })}
-  ${text(cx, 190, 'BUXORO OB-HAVO', { size: 30, weight: 600, fill: COLORS.cream, spacing: 6, opacity: 0.95 })}
-  <line x1="${cx - 44}" y1="216" x2="${cx + 44}" y2="216" stroke="${COLORS.copper}" stroke-width="3" stroke-linecap="round" />
+  ${text(cx, 120, 'TAMUR', { size: 48, weight: 700, fill: COLORS.copper, spacing: 10 })}
+  ${text(cx, 168, 'BUXORO OB-HAVO', { size: 30, weight: 600, fill: COLORS.cream, spacing: 6, opacity: 0.95 })}
+  <line x1="${cx - 44}" y1="192" x2="${cx + 44}" y2="192" stroke="${COLORS.copper}" stroke-width="3" stroke-linecap="round" />
 
-  <!-- Sana -->
-  ${text(cx, 278, dateLabel, { size: 34, weight: 500, fill: COLORS.creamMuted })}
+  <!-- Sana + neytral izoh -->
+  ${text(cx, 250, dateLabel, { size: 34, weight: 500, fill: COLORS.creamMuted })}
+  ${text(cx, 296, 'Bugungi prognoz • 3 manba', { size: 24, weight: 500, fill: COLORS.creamFaint, spacing: 1 })}
 
-  <!-- Hero -->
-  ${icon}
-  ${text(cx, 700, tempStr(final.currentTemperatureC), { size: 180, weight: 700, fill: COLORS.cream })}
-  ${text(cx, 762, uzLabel(final.condition), { size: 46, weight: 500, fill: COLORS.copperSoft })}
-
-  <!-- Stat kartalar -->
-  ${cardA1}${cardA2}
-  ${cardB1}${cardB2}${cardB3}
-
-  <!-- Xulosa -->
-  ${summary}
+  <!-- 3 manba kartasi -->
+  ${cards}
 
   <!-- Footer -->
-  ${text(cx, 1270, `Yangilandi • ${updated}`, { size: 24, weight: 500, fill: COLORS.creamFaint, spacing: 1 })}
+  ${text(cx, 1306, `Yangilandi • ${updated}`, { size: 24, weight: 500, fill: COLORS.creamFaint, spacing: 1 })}
 </svg>`;
 }
 
 /**
- * SVG -> PNG. resvg (lokal Poppins font bufferlari bilan — deterministik,
- * Chromiumsiz, Uzbek harflari to'g'ri) rasterlaydi, sharp esa yakuniy
- * PNG ni normallashtiradi/tasdiqlaydi (1080×1350).
+ * SVG -> PNG. resvg (lokal Poppins font — deterministik, Chromiumsiz, Uzbek
+ * harflari to'g'ri) rasterlaydi, sharp yakuniy PNG ni normallashtiradi.
  */
 export async function renderWeatherCardPng(
-  final: FinalWeather,
+  sources: WeatherSourceResult[],
   opts: CardRenderOptions,
 ): Promise<Buffer> {
   ensureFonts();
-  const svg = buildCardSvg(final, opts);
+  const svg = buildCardsSvg(sources, opts);
   const resvg = new Resvg(svg, {
     background: COLORS.navyDeep,
     fitTo: { mode: 'width', value: CANVAS.width },
@@ -243,8 +206,6 @@ export async function renderWeatherCardPng(
     },
   });
   const rasterPng = resvg.render().asPng();
-
-  // Sharp bilan yakuniy tekshirish/normallashtirish (aniq o'lcham, toza PNG).
   return sharp(rasterPng)
     .resize(CANVAS.width, CANVAS.height, { fit: 'fill' })
     .png({ compressionLevel: 9 })

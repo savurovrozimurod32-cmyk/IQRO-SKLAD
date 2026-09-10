@@ -1,39 +1,33 @@
 import { getEnv, requireTelegram } from '../config/env.js';
 import { renderWeatherCardPng } from '../design/renderWeatherCard.js';
-import { fetchAllSources } from '../sources/index.js';
+import { fetchAllSources, successCount } from '../sources/index.js';
 import { sendPhoto } from '../telegram/sendPhoto.js';
 import { zonedDateISO } from '../utils/datetime.js';
 import { errorMessage, logger } from '../utils/logger.js';
-import { computeConsensus } from '../weather/consensus.js';
-import { sampleFinal } from '../weather/sample.js';
-import type { FinalWeather } from '../weather/types.js';
+import { orderedSample } from '../weather/sample.js';
+import type { WeatherSourceResult } from '../weather/types.js';
 
 /**
  * `npm run send:test`
  * Telegram guruhga TEST ob-havo kartasini yuboradi (real yoki fixture).
- * Bu haqiqiy Telegram sozlamalarini talab qiladi.
+ * Haqiqiy Telegram sozlamalarini talab qiladi.
  */
 async function main(): Promise<void> {
   const env = getEnv();
-  requireTelegram(env); // yo'q bo'lsa aniq xato beradi
+  requireTelegram(env);
   const tz = env.WEATHER_TIMEZONE;
+  const date = zonedDateISO(tz);
 
-  let final: FinalWeather;
-  const sources = await fetchAllSources();
-  const consensus = computeConsensus(sources, {
-    city: env.WEATHER_CITY,
-    date: zonedDateISO(tz),
-    minSuccessfulSources: env.MIN_SUCCESSFUL_SOURCES,
-  });
-  if (consensus.ok) {
-    logger.info('send:test', `real ob-havo (${consensus.successCount} manba)`);
-    final = consensus.final;
+  let sources: WeatherSourceResult[] = await fetchAllSources(tz);
+  const ok = successCount(sources);
+  if (ok >= env.MIN_SUCCESSFUL_SOURCES) {
+    logger.info('send:test', `real ob-havo (${ok}/${sources.length} manba)`);
   } else {
-    logger.warn('send:test', `real ma‘lumot yetarli emas (${consensus.reason}); fixture yuboriladi`);
-    final = sampleFinal(tz);
+    logger.warn('send:test', `real manba yetarli emas (${ok}/${sources.length}); fixture yuboriladi`);
+    sources = orderedSample(tz);
   }
 
-  const png = await renderWeatherCardPng(final, { timezone: tz });
+  const png = await renderWeatherCardPng(sources, { city: env.WEATHER_CITY, date, timezone: tz });
   await sendPhoto(png, 'TEST • Buxoro ob-havo');
   logger.info('send:test', 'test kartasi yuborildi');
 }

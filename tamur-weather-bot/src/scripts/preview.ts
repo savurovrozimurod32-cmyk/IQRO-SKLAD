@@ -4,53 +4,69 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { getEnv } from '../config/env.js';
 import { renderWeatherCardPng } from '../design/renderWeatherCard.js';
-import { fetchAllSources } from '../sources/index.js';
+import { fetchAllSources, successCount } from '../sources/index.js';
 import { zonedDateISO } from '../utils/datetime.js';
 import { errorMessage, logger } from '../utils/logger.js';
-import { computeConsensus } from '../weather/consensus.js';
-import { sampleFinal } from '../weather/sample.js';
-import type { FinalWeather } from '../weather/types.js';
+import { orderedSample, withFailures } from '../weather/sample.js';
+import type { WeatherSourceResult } from '../weather/types.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = resolve(HERE, '../../output/preview.png');
+const OUT_DIR = resolve(HERE, '../../output');
 
 /**
  * `npm run preview`
- * Real ob-havoni olishga urinadi; yetarli manba bo'lmasa namunaviy (fixture)
- * ma'lumotdan foydalanadi. `output/preview.png` yaratadi. Telegram ga yubormaydi.
+ * Real ob-havoni olishga urinadi; olinmasa namunaviy (fixture) ma'lumot.
+ * `output/preview.png` yaratadi. Telegram ga yubormaydi.
+ *
+ * Qo'shimcha variantlar (fixture) failure holatlarini ham chizadi:
+ *   --variants  ->  output/preview-3of3.png, preview-2of3.png, preview-1of3.png
  */
 async function main(): Promise<void> {
   const env = getEnv();
   const tz = env.WEATHER_TIMEZONE;
-  const useFixture = process.argv.includes('--fixture');
+  const date = zonedDateISO(tz);
+  await mkdir(OUT_DIR, { recursive: true });
 
-  let final: FinalWeather;
+  const save = async (sources: WeatherSourceResult[], file: string): Promise<void> => {
+    const png = await renderWeatherCardPng(sources, {
+      city: env.WEATHER_CITY,
+      date,
+      timezone: tz,
+      updatedAtLabel: '09:00',
+    });
+    const out = resolve(OUT_DIR, file);
+    await writeFile(out, png);
+    const meta = await sharp(png).metadata();
+    logger.info('preview', `${file}: ${meta.width}×${meta.height} ${meta.format} ${png.length} bayt`);
+  };
+
+  if (process.argv.includes('--variants')) {
+    const base = orderedSample(tz);
+    await save(base, 'preview-3of3.png');
+    await save(withFailures(base, ['weatherapi']), 'preview-2of3.png');
+    await save(withFailures(base, ['met-norway', 'weatherapi']), 'preview-1of3.png');
+    logger.info('preview', 'variantlar yaratildi (output/preview-*of3.png)');
+    return;
+  }
+
+  const useFixture = process.argv.includes('--fixture');
+  let sources: WeatherSourceResult[];
   if (useFixture) {
     logger.info('preview', 'fixture ma‘lumotidan foydalanilmoqda (--fixture)');
-    final = sampleFinal(tz);
+    sources = orderedSample(tz);
   } else {
-    const sources = await fetchAllSources();
-    const consensus = computeConsensus(sources, {
-      city: env.WEATHER_CITY,
-      date: zonedDateISO(tz),
-      minSuccessfulSources: env.MIN_SUCCESSFUL_SOURCES,
-    });
-    if (consensus.ok) {
-      logger.info('preview', `real ob-havo (${consensus.successCount} manba)`);
-      final = consensus.final;
+    sources = await fetchAllSources(tz);
+    const ok = successCount(sources);
+    if (ok >= env.MIN_SUCCESSFUL_SOURCES) {
+      logger.info('preview', `real ob-havo (${ok}/${sources.length} manba)`);
     } else {
-      logger.warn('preview', `real ma‘lumot yetarli emas (${consensus.reason}); fixture ishlatiladi`);
-      final = sampleFinal(tz);
+      logger.warn('preview', `real manba yetarli emas (${ok}/${sources.length}); fixture ishlatiladi`);
+      sources = orderedSample(tz);
     }
   }
 
-  const png = await renderWeatherCardPng(final, { timezone: tz, updatedAtLabel: '09:00' });
-  await mkdir(dirname(OUT), { recursive: true });
-  await writeFile(OUT, png);
-
-  const meta = await sharp(png).metadata();
-  logger.info('preview', `saqlandi: ${OUT}`);
-  logger.info('preview', `o‘lcham: ${meta.width}×${meta.height}  format: ${meta.format}  ${png.length} bayt`);
+  await save(sources, 'preview.png');
+  logger.info('preview', `saqlandi: ${resolve(OUT_DIR, 'preview.png')}`);
 }
 
 main().catch((err) => {
