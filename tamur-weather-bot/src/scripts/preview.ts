@@ -28,11 +28,11 @@ async function main(): Promise<void> {
   await mkdir(OUT_DIR, { recursive: true });
 
   const save = async (sources: WeatherSourceResult[], file: string): Promise<void> => {
+    // updatedAtLabel berilmaydi -> renderer real Asia/Tashkent vaqtini ishlatadi.
     const png = await renderWeatherCardPng(sources, {
       city: env.WEATHER_CITY,
       date,
       timezone: tz,
-      updatedAtLabel: '09:00',
     });
     const out = resolve(OUT_DIR, file);
     await writeFile(out, png);
@@ -57,10 +57,11 @@ async function main(): Promise<void> {
   } else {
     sources = await fetchAllSources(tz);
     const ok = successCount(sources);
-    if (ok >= env.MIN_SUCCESSFUL_SOURCES) {
+    // Yangi qoida: kamida 1 manba ishlasa real preview chiziladi.
+    if (ok >= 1) {
       logger.info('preview', `real ob-havo (${ok}/${sources.length} manba)`);
     } else {
-      logger.warn('preview', `real manba yetarli emas (${ok}/${sources.length}); fixture ishlatiladi`);
+      logger.warn('preview', `real manba yo‘q (0/${sources.length}); fixture ishlatiladi`);
       sources = orderedSample(tz);
     }
   }
