@@ -21,8 +21,6 @@ services:
         value: "64.4286"
       - key: WEATHER_TIMEZONE
         value: Asia/Tashkent
-      - key: MIN_SUCCESSFUL_SOURCES
-        value: "1"
       # --- Quyidagilarni dashboard'da qo'lda kiriting (sync: false) ---
       - key: WEATHERAPI_KEY
         sync: false
