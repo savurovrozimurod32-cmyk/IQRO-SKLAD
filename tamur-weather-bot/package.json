@@ -4,7 +4,7 @@
   "description": "TAMUR Buxoro daily weather card generator and Telegram sender",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -18,7 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "verify": "npm run typecheck && npm test",
+    "build:compile": "tsc",
+    "build": "npm run verify && npm run build:compile"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

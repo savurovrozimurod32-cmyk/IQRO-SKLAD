@@ -16,6 +16,18 @@ const numericString = (fallback: number) =>
     .transform((v) => (v === undefined || v === '' ? fallback : Number(v)))
     .pipe(z.number().finite());
 
+const booleanString = (fallback: boolean) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (v === undefined || v === '') return fallback;
+      const n = v.trim().toLowerCase();
+      if (['1', 'true', 'yes', 'on'].includes(n)) return true;
+      if (['0', 'false', 'no', 'off'].includes(n)) return false;
+      return fallback;
+    });
+
 const EnvSchema = z.object({
   NODE_ENV: z.string().default('development'),
 
@@ -27,7 +39,7 @@ const EnvSchema = z.object({
   WEATHERAPI_KEY: z.string().optional().default(''),
   MET_USER_AGENT: z
     .string()
-    .min(5, 'MET_USER_AGENT bo‘sh bo‘lmasligi kerak (MET Norway talab qiladi)')
+    .min(5, 'MET_USER_AGENT bo‘sh bo‘lmasligi kerak (legacy adapter uchun)')
     .default('TamurWeatherBot/1.0 contact@example.com'),
 
   TELEGRAM_BOT_TOKEN: z.string().optional().default(''),
@@ -36,6 +48,10 @@ const EnvSchema = z.object({
 
   REQUEST_TIMEOUT_MS: numericString(9000).pipe(z.number().int().min(1000).max(60000)),
   REQUEST_MAX_ATTEMPTS: numericString(3).pipe(z.number().int().min(1).max(5)),
+
+  // Production lock: Render'dagi muhim sozlamalar tasodifan o'zgarsa postni bloklaydi.
+  PRODUCTION_LOCK_ENABLED: booleanString(false),
+  PRODUCTION_LOCK_CHAT_IDS: z.string().optional().default(''),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

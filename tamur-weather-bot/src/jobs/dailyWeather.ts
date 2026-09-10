@@ -1,4 +1,5 @@
 import { getEnv } from '../config/env.js';
+import { assertProductionLock } from '../config/productionLock.js';
 import { renderDailyCardPng } from '../design/renderDailyCard.js';
 import { renderWeeklyCardPng } from '../design/renderWeeklyCard.js';
 import { getDailySummary, getWeeklyForecast } from '../sources/index.js';
@@ -22,6 +23,9 @@ export interface DailyResult {
  */
 export async function runDailyWeather(opts: { dryRun?: boolean } = {}): Promise<DailyResult> {
   const env = getEnv();
+  assertProductionLock(env);
+  if (env.PRODUCTION_LOCK_ENABLED) logger.info('lock', 'production contract verified');
+
   const tz = env.WEATHER_TIMEZONE;
   logger.info('weather', 'starting daily job');
 
