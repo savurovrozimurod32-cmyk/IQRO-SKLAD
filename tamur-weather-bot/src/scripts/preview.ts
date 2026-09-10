@@ -3,63 +3,58 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { getEnv } from '../config/env.js';
-import { renderHourlyCardPng } from '../design/renderHourlyCard.js';
-import { fetchHourlySources, successCount } from '../sources/index.js';
-import { zonedDateISO } from '../utils/datetime.js';
+import { renderDailyCardPng } from '../design/renderDailyCard.js';
+import { renderWeeklyCardPng } from '../design/renderWeeklyCard.js';
+import { getDailySummary, getWeeklyForecast } from '../sources/index.js';
 import { errorMessage, logger } from '../utils/logger.js';
-import { orderedHourlySample, withHourlyFailures } from '../weather/hourlySample.js';
-import type { HourlySourceResult } from '../weather/types.js';
+import { sampleDailySummary, sampleWeeklyForecast } from '../weather/forecastSample.js';
+import { buildRecommendation } from '../weather/recommendation.js';
+import type { DailySummary, WeeklyForecast } from '../weather/types.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(HERE, '../../output');
 
 /**
  * `npm run preview`
- * Real soatbay ob-havoni olishga urinadi; olinmasa (0/2) namunaviy data.
- * `output/preview.png` yaratadi. Telegram ga yubormaydi.
- *   --fixture   -> doim namunaviy data
- *   --variants  -> output/preview-2of2.png, preview-1of2.png
+ * Real ma'lumot olishga urinadi; olinmasa fixture. Telegram ga yubormaydi.
+ *   output/daily-summary.png  va  output/weekly-forecast.png
+ *   --fixture  -> doim namunaviy data
  */
 async function main(): Promise<void> {
   const env = getEnv();
   const tz = env.WEATHER_TIMEZONE;
-  const date = zonedDateISO(tz);
   await mkdir(OUT_DIR, { recursive: true });
+  const useFixture = process.argv.includes('--fixture');
 
-  const save = async (sources: HourlySourceResult[], file: string): Promise<void> => {
-    // updatedAtLabel berilmaydi -> real Asia/Tashkent vaqti ishlatiladi.
-    const png = await renderHourlyCardPng(sources, { city: env.WEATHER_CITY, date, timezone: tz });
-    const out = resolve(OUT_DIR, file);
-    await writeFile(out, png);
-    const meta = await sharp(png).metadata();
-    logger.info('preview', `${file}: ${meta.width}×${meta.height} ${meta.format} ${png.length} bayt`);
-  };
-
-  if (process.argv.includes('--variants')) {
-    const base = orderedHourlySample(tz);
-    await save(base, 'preview-2of2.png');
-    await save(withHourlyFailures(base, ['weatherapi']), 'preview-1of2.png');
-    logger.info('preview', 'variantlar yaratildi (output/preview-*of2.png)');
-    return;
-  }
-
-  let sources: HourlySourceResult[];
-  if (process.argv.includes('--fixture')) {
+  let daily: DailySummary;
+  let weekly: WeeklyForecast;
+  if (useFixture) {
     logger.info('preview', 'fixture ma‘lumotidan foydalanilmoqda (--fixture)');
-    sources = orderedHourlySample(tz);
+    daily = sampleDailySummary(tz);
+    weekly = sampleWeeklyForecast(tz);
   } else {
-    sources = await fetchHourlySources(tz);
-    const ok = successCount(sources);
-    if (ok >= 1) {
-      logger.info('preview', `real soatbay ob-havo (${ok}/${sources.length} manba)`);
-    } else {
-      logger.warn('preview', `real manba yo‘q (0/${sources.length}); fixture ishlatiladi`);
-      sources = orderedHourlySample(tz);
+    [daily, weekly] = await Promise.all([getDailySummary(), getWeeklyForecast()]);
+    if (!daily.success) {
+      logger.warn('preview', `kunlik real data yo‘q (${daily.error}); fixture`);
+      daily = sampleDailySummary(tz);
+    }
+    if (!weekly.success) {
+      logger.warn('preview', `10-kunlik real data yo‘q (${weekly.error}); fixture`);
+      weekly = sampleWeeklyForecast(tz);
     }
   }
 
-  await save(sources, 'preview.png');
-  logger.info('preview', `saqlandi: ${resolve(OUT_DIR, 'preview.png')}`);
+  const dailyPng = await renderDailyCardPng(daily, { city: env.WEATHER_CITY, timezone: tz });
+  await writeFile(resolve(OUT_DIR, 'daily-summary.png'), dailyPng);
+  const dMeta = await sharp(dailyPng).metadata();
+  logger.info('preview', `daily-summary.png: ${dMeta.width}×${dMeta.height} ${dailyPng.length} bayt`);
+
+  const rec = buildRecommendation(weekly.days, tz);
+  const weeklyPng = await renderWeeklyCardPng(weekly, rec, { timezone: tz });
+  await writeFile(resolve(OUT_DIR, 'weekly-forecast.png'), weeklyPng);
+  const wMeta = await sharp(weeklyPng).metadata();
+  logger.info('preview', `weekly-forecast.png: ${wMeta.width}×${wMeta.height} ${weeklyPng.length} bayt`);
+  if (rec) logger.info('preview', `menejer tavsiyasi: ${rec.lines.join(' | ')}`);
 }
 
 main().catch((err) => {

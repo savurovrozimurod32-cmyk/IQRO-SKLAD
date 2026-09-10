@@ -11,21 +11,12 @@ export type WeatherCondition =
   | 'thunderstorm'
   | 'unknown';
 
+// Legacy: MET Norway adapteri (`metNorway.ts`) shu tipdan foydalanadi.
 export type WeatherSourceId = 'open-meteo' | 'met-norway' | 'weatherapi';
 
-/** Rasmda ko'rsatiladigan manba nomlari (endi yashirilmaydi). */
-export const SOURCE_DISPLAY_NAME: Record<WeatherSourceId, string> = {
-  'open-meteo': 'Open-Meteo',
-  'met-norway': 'MET Norway',
-  weatherapi: 'WeatherAPI',
-};
-
-/** Rasmdagi kartalar doimo shu tartibda chiqadi. */
-export const SOURCE_ORDER: WeatherSourceId[] = ['open-meteo', 'met-norway', 'weatherapi'];
-
 /**
- * Har bir provider o'z API formatini shu yagona modelga normalize qiladi.
- * Mavjud bo'lmagan qiymatlar `null` bo'ladi (consensus ularni chetlab o'tadi).
+ * Legacy per-source natija modeli (metNorway adapteri uchun saqlangan).
+ * Final output bu modeldan foydalanmaydi.
  */
 export interface WeatherSourceResult {
   source: WeatherSourceId;
@@ -52,33 +43,41 @@ export interface WeatherSourceResult {
   error?: string;
 }
 
-// ───────────────────────── HOURLY (final talab) ─────────────────────────
-// Production oqim endi soatbay prognozga asoslanadi (current/daily emas).
-// Faqat 2 manba: Open-Meteo va WeatherAPI. Merge/consensus YO'Q.
+// ───────────────────── FINAL: 2 RASM (kunlik + 10 kunlik) ─────────────────────
+// Telegramga 2 alohida rasm yuboriladi: daily-summary + weekly-forecast.
 
-export type HourlySourceId = 'open-meteo' | 'weatherapi';
-
-/** Bitta soat uchun prognoz nuqtasi. */
-export interface HourlyForecastPoint {
-  time: string; // "HH:mm" (Asia/Tashkent local)
-  temperatureC: number | null;
-  condition: WeatherCondition;
-  precipitationProbability: number | null; // 0-100
-  windSpeedKmh: number | null;
-}
-
-/** Bitta manbaning bugungi soatbay natijasi. */
-export interface HourlySourceResult {
-  source: HourlySourceId;
+/** 1-rasm uchun bugungi kun xulosasi (WeatherAPI primary, Open-Meteo fallback). */
+export interface DailySummary {
   date: string; // "YYYY-MM-DD" (Asia/Tashkent)
-  hourly: HourlyForecastPoint[];
+  condition: WeatherCondition;
+  maxTempC: number | null; // kunduzgi
+  minTempC: number | null; // tungi
+  humidityPercent: number | null;
+  windKmh: number | null;
+  pressureMb: number | null;
+  moonPhaseUz: string | null; // o'zbekcha oy fazasi
+  sunrise: string | null; // "HH:mm"
+  sunset: string | null; // "HH:mm"
+  morningTempC: number | null; // Tong (~07:00)
+  dayTempC: number | null; // Kun (~14:00)
+  eveningTempC: number | null; // Oqshom (~19:00)
   success: boolean;
   error?: string;
 }
 
-/** Rasmdagi ustunlar doimo shu tartibda: Open-Meteo, keyin WeatherAPI. */
-export const HOURLY_SOURCE_ORDER: HourlySourceId[] = ['open-meteo', 'weatherapi'];
+/** 2-rasm: bir kunning bloki. */
+export interface ForecastDay {
+  date: string; // "YYYY-MM-DD"
+  condition: WeatherCondition;
+  maxTempC: number | null; // kunduzgi max
+  minTempC: number | null; // tungi min
+  precipitationProbability: number | null;
+  windKmh: number | null;
+}
 
-/** Soatbay oyna: 09:00 dan 23:00 gacha (15 ta soat). */
-export const HOURLY_START_HOUR = 9;
-export const HOURLY_END_HOUR = 23;
+/** 2-rasm: bugun + keyingi 9 kun (jami 10). */
+export interface WeeklyForecast {
+  days: ForecastDay[];
+  success: boolean;
+  error?: string;
+}

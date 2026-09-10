@@ -1,36 +1,38 @@
 import { getEnv } from '../config/env.js';
-import { fetchHourlySources, successCount } from '../sources/index.js';
+import { getDailySummary, getWeeklyForecast } from '../sources/index.js';
+import { weekdayShortUz } from '../utils/datetime.js';
 import { logger } from '../utils/logger.js';
-import { SOURCE_DISPLAY_NAME } from '../weather/types.js';
+import { buildRecommendation } from '../weather/recommendation.js';
 
 /**
  * `npm run fetch:test`
- * 2 manbadan bugungi SOATBAY prognozni olib, har birini ALOHIDA ko'rsatadi.
+ * Kunlik xulosa + 10 kunlik forecast + menejer tavsiyasini console'da ko'rsatadi.
  * Telegram ga hech narsa yubormaydi.
  */
 async function main(): Promise<void> {
   const env = getEnv();
+  const tz = env.WEATHER_TIMEZONE;
   logger.info('fetch:test', `Hudud: ${env.WEATHER_CITY} (${env.WEATHER_LAT}, ${env.WEATHER_LON})`);
 
-  const sources = await fetchHourlySources(env.WEATHER_TIMEZONE);
+  const [daily, weekly] = await Promise.all([getDailySummary(), getWeeklyForecast()]);
 
-  for (const s of sources) {
-    const name = SOURCE_DISPLAY_NAME[s.source] ?? s.source;
-    console.log(`\n── ${name} ${s.success ? '✅' : '❌'} (${s.hourly.length} soat) ──`);
-    if (!s.success) {
-      console.log(`   error: ${s.error}`);
-      continue;
-    }
-    for (const p of s.hourly) {
-      const rain = p.precipitationProbability === null ? '—' : `${p.precipitationProbability}%`;
-      const wind = p.windSpeedKmh === null ? '—' : `${p.windSpeedKmh} km/soat`;
-      console.log(`   ${p.time}  ${p.temperatureC ?? '—'}°  ${p.condition}  yomg‘ir:${rain}  shamol:${wind}`);
-    }
+  console.log(`\n── KUNLIK ${daily.success ? '✅' : '❌'} ──`);
+  if (daily.success) {
+    console.log(`   ${daily.date}  ${daily.condition}  max:${daily.maxTempC}° min:${daily.minTempC}°`);
+    console.log(`   namlik:${daily.humidityPercent}%  shamol:${daily.windKmh}km/soat  bosim:${daily.pressureMb}mb`);
+    console.log(`   oy:${daily.moonPhaseUz}  quyosh:${daily.sunrise}–${daily.sunset}`);
+    console.log(`   tong:${daily.morningTempC}° kun:${daily.dayTempC}° oqshom:${daily.eveningTempC}°`);
+  } else console.log(`   error: ${daily.error}`);
+
+  console.log(`\n── 10 KUNLIK ${weekly.success ? '✅' : '❌'} (${weekly.days.length} kun) ──`);
+  for (const d of weekly.days) {
+    console.log(`   ${d.date} ${weekdayShortUz(d.date, tz)}  ${d.condition}  ${d.maxTempC}°/${d.minTempC}°  yomg‘ir:${d.precipitationProbability ?? '—'}%`);
   }
 
-  console.log(`\n════════ NATIJA ════════`);
-  console.log(`ishlagan manbalar: ${successCount(sources)}/${sources.length}`);
-  console.log('(consensus yo‘q — har manba rasmda alohida ustun bo‘lib chiqadi)');
+  const rec = buildRecommendation(weekly.days, tz);
+  console.log(`\n── MENEJER TAVSIYASI ──`);
+  if (rec) rec.lines.forEach((l) => console.log(`   ${l}`));
+  else console.log('   (ma’lumot yetarli emas)');
 }
 
 main().catch((err) => {

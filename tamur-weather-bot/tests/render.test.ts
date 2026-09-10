@@ -1,32 +1,52 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
-import { HOURLY_CANVAS, renderHourlyCardPng } from '../src/design/renderHourlyCard.js';
-import { orderedHourlySample, withHourlyFailures } from '../src/weather/hourlySample.js';
+import { DAILY_CANVAS, renderDailyCardPng } from '../src/design/renderDailyCard.js';
+import { WEEKLY_CANVAS, renderWeeklyCardPng } from '../src/design/renderWeeklyCard.js';
+import { sampleDailySummary, sampleWeeklyForecast } from '../src/weather/forecastSample.js';
+import { buildRecommendation } from '../src/weather/recommendation.js';
 
-const opts = { city: 'Buxoro', date: '2026-09-10', timezone: 'Asia/Tashkent', updatedAtLabel: '09:00' };
+const TZ = 'Asia/Tashkent';
 
-async function assertValid(png: Buffer): Promise<void> {
+async function meta(png: Buffer) {
   expect(png.length).toBeGreaterThan(1000);
   expect(png.subarray(0, 4).toString('hex')).toBe('89504e47'); // PNG magic
-  const meta = await sharp(png).metadata();
-  expect(meta.format).toBe('png');
-  expect(meta.width).toBe(HOURLY_CANVAS.width); // 1080
-  expect(meta.height).toBe(HOURLY_CANVAS.height); // 2400 (uzun format)
+  return sharp(png).metadata();
 }
 
-describe('soatbay jadval PNG rendering', () => {
-  it('2/2 — ikkala ustun real data', async () => {
-    const png = await renderHourlyCardPng(orderedHourlySample('Asia/Tashkent'), opts);
-    await assertValid(png);
+describe('daily-summary rendering', () => {
+  it('1080×1200 valid PNG', async () => {
+    const png = await renderDailyCardPng(sampleDailySummary(TZ), { city: 'Buxoro', timezone: TZ });
+    const m = await meta(png);
+    expect(m.format).toBe('png');
+    expect(m.width).toBe(DAILY_CANVAS.width);
+    expect(m.height).toBe(DAILY_CANVAS.height);
   });
 
-  it('1/2 — bitta ustun "Ma’lumot olinmadi", layout saqlanadi', async () => {
-    const sources = withHourlyFailures(orderedHourlySample('Asia/Tashkent'), ['weatherapi']);
-    const png = await renderHourlyCardPng(sources, opts);
-    await assertValid(png);
+  it('null qiymatlar bilan ham render bo‘ladi', async () => {
+    const s = sampleDailySummary(TZ);
+    const png = await renderDailyCardPng(
+      { ...s, moonPhaseUz: null, pressureMb: null, sunrise: null, sunset: null, morningTempC: null },
+      { city: 'Buxoro', timezone: TZ },
+    );
+    expect(png.length).toBeGreaterThan(1000);
+  });
+});
+
+describe('weekly-forecast rendering', () => {
+  it('1280×760 valid PNG + manager box', async () => {
+    const weekly = sampleWeeklyForecast(TZ);
+    const rec = buildRecommendation(weekly.days, TZ);
+    const png = await renderWeeklyCardPng(weekly, rec, { timezone: TZ });
+    const m = await meta(png);
+    expect(m.format).toBe('png');
+    expect(m.width).toBe(WEEKLY_CANVAS.width);
+    expect(m.height).toBe(WEEKLY_CANVAS.height);
   });
 
-  it('uzun format 1080×2400', () => {
-    expect(HOURLY_CANVAS).toEqual({ width: 1080, height: 2400 });
+  it('kam kun (fallback 3 kun) bo‘lsa ham render bo‘ladi', async () => {
+    const weekly = sampleWeeklyForecast(TZ);
+    const three = { ...weekly, days: weekly.days.slice(0, 3) };
+    const png = await renderWeeklyCardPng(three, buildRecommendation(three.days, TZ), { timezone: TZ });
+    expect(png.length).toBeGreaterThan(1000);
   });
 });

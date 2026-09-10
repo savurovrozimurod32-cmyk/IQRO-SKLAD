@@ -13,15 +13,8 @@ async function main(): Promise<void> {
 
   const result = await runDailyWeather();
 
-  if (result.sent) {
-    process.exitCode = 0;
-  } else if (result.blocked) {
-    // Yuborilmadi, lekin bu kutilgan holat (yetarli manba yo'q / render xato).
-    // Cron uchun "muvaffaqiyatsiz" deб belgilaymiz, admin allaqachon ogohlantirilgan.
-    process.exitCode = 1;
-  } else {
-    process.exitCode = 0;
-  }
+  // Hech qanday rasm yuborilmasa (data umuman yo'q) — cron uchun fail.
+  process.exitCode = result.sent > 0 ? 0 : 1;
 }
 
 main().catch((err) => {

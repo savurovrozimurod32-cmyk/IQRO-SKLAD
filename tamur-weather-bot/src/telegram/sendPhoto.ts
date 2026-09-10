@@ -26,45 +26,61 @@ async function callTelegram(
   return json;
 }
 
-/** Rasm (PNG buffer) ni Telegram guruhiga yuboradi. 3 marta retry qiladi. */
-export async function sendPhoto(
+/** Bitta chatga rasm yuboradi (3 marta retry). */
+async function sendPhotoToChat(
+  botToken: string,
+  chatId: string,
   png: Buffer,
-  caption = 'Buxoro • Bugungi ob-havo',
+  caption: string,
 ): Promise<void> {
+  await withRetry(
+    async () => {
+      const form = new FormData();
+      form.set('chat_id', chatId);
+      form.set('caption', caption);
+      form.set('photo', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'buxoro-ob-havo.png');
+      await callTelegram('sendPhoto', botToken, form);
+    },
+    {
+      maxAttempts: 3,
+      baseDelayMs: 1000,
+      onRetry: (attempt, max, err) =>
+        logger.warn('telegram', `sendPhoto (${chatId}) muvaffaqiyatsiz ${attempt}/${max}: ${errorMessage(err)}`),
+    },
+  );
+}
+
+/**
+ * Rasm (PNG buffer) ni Telegram guruh(lar)iga yuboradi.
+ * TELEGRAM_CHAT_ID vergul bilan ajratilgan bir nechta guruhni qo'llab-quvvatlaydi
+ * (masalan bir vaqtda 2 guruhga). Kamida bittasi muvaffaqiyatli bo'lsa — OK.
+ */
+export async function sendPhoto(png: Buffer, caption = 'Buxoro • Bugungi ob-havo'): Promise<void> {
   const env = getEnv();
   const { botToken, chatId, adminChatId } = requireTelegram(env);
+  const chatIds = chatId.split(',').map((c) => c.trim()).filter(Boolean);
 
-  try {
-    await withRetry(
-      async () => {
-        const form = new FormData();
-        form.set('chat_id', chatId);
-        form.set('caption', caption);
-        form.set(
-          'photo',
-          new Blob([new Uint8Array(png)], { type: 'image/png' }),
-          'buxoro-ob-havo.png',
-        );
-        await callTelegram('sendPhoto', botToken, form);
-      },
-      {
-        maxAttempts: 3,
-        baseDelayMs: 1000,
-        onRetry: (attempt, max, err) =>
-          logger.warn('telegram', `sendPhoto muvaffaqiyatsiz ${attempt}/${max}: ${errorMessage(err)}`),
-      },
-    );
-    logger.info('telegram', 'photo sent');
-  } catch (err) {
-    const msg = errorMessage(err);
-    logger.error('telegram', `sendPhoto uzil-kesil muvaffaqiyatsiz: ${msg}`);
-    // Admin bo'lsa — matnli ogohlantirishga urinamiz (infinite loop yo'q).
-    if (adminChatId) {
-      await notifyAdmin(`❗️Ob-havo rasmi yuborilmadi: ${msg}`).catch(() => {
-        logger.error('telegram', 'admin xabari ham yuborilmadi');
-      });
+  let ok = 0;
+  const errors: string[] = [];
+  for (const id of chatIds) {
+    try {
+      await sendPhotoToChat(botToken, id, png, caption);
+      ok++;
+      logger.info('telegram', `photo sent (${id})`);
+    } catch (err) {
+      errors.push(`${id}: ${errorMessage(err)}`);
+      logger.error('telegram', `sendPhoto uzil-kesil muvaffaqiyatsiz (${id}): ${errorMessage(err)}`);
     }
-    throw err;
+  }
+
+  if (ok === 0) {
+    const msg = errors.join('; ');
+    if (adminChatId) {
+      await notifyAdmin(`❗️Ob-havo rasmi yuborilmadi: ${msg}`).catch(() =>
+        logger.error('telegram', 'admin xabari ham yuborilmadi'),
+      );
+    }
+    throw new Error(`sendPhoto: hech bir guruhga yuborilmadi (${msg})`);
   }
 }
 

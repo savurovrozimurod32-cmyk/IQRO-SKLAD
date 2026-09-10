@@ -99,3 +99,41 @@ export function zonedTimeHHMM(timeZone: string, at: Date = new Date()): string {
   const p = zonedParts(timeZone, at);
   return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`;
 }
+
+// Uzbek qisqa hafta kunlari (kunlik/haftalik kartalar uchun)
+const UZ_WEEKDAY_SHORT: Record<string, string> = {
+  Sunday: 'Ya',
+  Monday: 'Du',
+  Tuesday: 'Se',
+  Wednesday: 'Cho',
+  Thursday: 'Pa',
+  Friday: 'Ju',
+  Saturday: 'Sha',
+};
+
+function weekdayEnOf(dateISO: string, timeZone: string): string {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const probe = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1, 12, 0, 0));
+  return new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' }).format(probe);
+}
+
+/** "Ya", "Du", "Se"... (haftalik karta uchun qisqa). */
+export function weekdayShortUz(dateISO: string, timeZone: string): string {
+  return UZ_WEEKDAY_SHORT[weekdayEnOf(dateISO, timeZone)] ?? '';
+}
+
+/** "Yakshanba", "Dushanba"... (menejer tavsiyasi matni uchun). */
+export function weekdayFullUz(dateISO: string, timeZone: string): string {
+  return UZ_WEEKDAYS[weekdayEnOf(dateISO, timeZone)] ?? '';
+}
+
+/** "10 Sentabr" (kunlik karta subheader: "Bugun, 10 Sentabr"). */
+export function formatUzDayMonth(dateISO: string): string {
+  const [, m, d] = dateISO.split('-').map(Number);
+  return `${d} ${UZ_MONTHS[(m ?? 1) - 1] ?? ''}`;
+}
+
+/** "DD" kun raqami (haftalik kartadagi sana). */
+export function dayOfMonth(dateISO: string): number {
+  return Number(dateISO.split('-')[2] ?? 0);
+}
