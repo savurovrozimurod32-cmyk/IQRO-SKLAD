@@ -58,10 +58,7 @@ export function successCount(sources: WeatherSourceResult[]): number {
   return sources.filter((s) => s.success).length;
 }
 
-/**
- * Rasm yuborilsinmi? Kamida `minSuccessful` manba ishlashi kerak.
- * Default 1 — faqat 0/3 bo'lsa yuborilmaydi.
- */
-export function shouldSend(sources: WeatherSourceResult[], minSuccessful: number): boolean {
-  return successCount(sources) >= minSuccessful;
+/** Final qoida: kamida bitta real manba ishlasa post yuborish mumkin. */
+export function shouldSend(sources: WeatherSourceResult[]): boolean {
+  return successCount(sources) > 0;
 }
