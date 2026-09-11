@@ -121,7 +121,7 @@ export function buildWeeklySvg(
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   ${backgroundLayer(W, H, bg)}
 
-  ${text(cx, 66, '10 KUNLIK BASHORAT', { size: 38, weight: 700, fill: COLORS.copper, spacing: 4 })}
+  ${text(cx, 66, '10 KUNLIK KUTILAYOTGAN OB-HAVO', { size: 32, weight: 700, fill: COLORS.copper, spacing: 2 })}
   ${text(W - MARGIN, 44, `Yangilandi • ${updated}`, { size: 20, weight: 500, fill: COLORS.creamFaint, anchor: 'end' })}
 
   ${maxLine}

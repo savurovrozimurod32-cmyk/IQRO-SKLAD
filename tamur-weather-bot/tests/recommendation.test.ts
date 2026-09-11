@@ -60,3 +60,38 @@ describe('buildRecommendation', () => {
     expect(buildRecommendation([], TZ)).toBeNull();
   });
 });
+
+describe('cloudy = salqin/sust (final lock qoidasi)', () => {
+  it('bir xil haroratda: clear > partly_cloudy > cloudy', () => {
+    const clear = scoreDay(day('2026-09-10', { condition: 'clear', maxTempC: 30 }));
+    const partly = scoreDay(day('2026-09-10', { condition: 'partly_cloudy', maxTempC: 30 }));
+    const cloudy = scoreDay(day('2026-09-10', { condition: 'cloudy', maxTempC: 30 }));
+    expect(clear).toBeGreaterThan(partly);
+    expect(partly).toBeGreaterThan(cloudy);
+  });
+
+  it('cloudy kun condition hissasi manfiy (quyosh yo‘q -> salqin)', () => {
+    // Bir xil haroratdagi clear va cloudy farqi >= 4 (4 -> -1)
+    const clear = scoreDay(day('2026-09-10', { condition: 'clear', maxTempC: 30 }));
+    const cloudy = scoreDay(day('2026-09-10', { condition: 'cloudy', maxTempC: 30 }));
+    expect(clear - cloudy).toBeGreaterThanOrEqual(4);
+  });
+
+  it('aralash kunlarda cloudy kun eng qulay deb tanlanmaydi', () => {
+    const days: ForecastDay[] = [
+      day('2026-09-10', { condition: 'cloudy', maxTempC: 30 }),
+      day('2026-09-11', { condition: 'clear', maxTempC: 30 }),
+    ];
+    const rec = buildRecommendation(days, TZ)!;
+    expect(rec.bestDate).toBe('2026-09-11'); // clear kun
+  });
+
+  it('butun hafta cloudy bo‘lsa "qulay kun / hech kimga javob berilmaydi" chiqmaydi', () => {
+    const days: ForecastDay[] = [
+      day('2026-09-10', { condition: 'cloudy', maxTempC: 28 }),
+      day('2026-09-11', { condition: 'cloudy', maxTempC: 27 }),
+    ];
+    const rec = buildRecommendation(days, TZ)!;
+    expect(rec.lines[0]).not.toContain('hech kimga javob berilmaydi');
+  });
+});

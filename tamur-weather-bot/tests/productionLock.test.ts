@@ -35,4 +35,18 @@ describe('production lock', () => {
   it('lock o‘chirilgan local/dev oqimga xalaqit bermaydi', () => {
     expect(() => assertProductionLock({ ...base, NODE_ENV: 'development', PRODUCTION_LOCK_ENABLED: false })).not.toThrow();
   });
+
+  it('production faqat BITTA guruhga ruxsat beradi (2 guruhni bloklaydi)', () => {
+    expect(() =>
+      assertProductionLock({
+        ...base,
+        TELEGRAM_CHAT_ID: '-1002087046851,-1004481781973',
+        PRODUCTION_LOCK_CHAT_IDS: '-1002087046851,-1004481781973',
+      }),
+    ).toThrow(/bitta guruh/i);
+  });
+
+  it('bitta guruh (final target) qabul qilinadi', () => {
+    expect(() => assertProductionLock({ ...base, TELEGRAM_CHAT_ID: '-1002087046851', PRODUCTION_LOCK_CHAT_IDS: '-1002087046851' })).not.toThrow();
+  });
 });

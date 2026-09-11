@@ -4,7 +4,7 @@ Har kuni soat **09:00 (Asia/Tashkent)** da Buxoro shahri uchun TAMUR Telegram
 guruh(lar)iga **2 ta premium rasm** yuboradi:
 
 1. **Kunlik ob-havo kartasi** (`daily-summary.png`) — bugungi kun to‘liq xulosasi.
-2. **10 kunlik bashorat** (`weekly-forecast.png`) — bugun + 9 kun, harorat grafigi
+2. **10 kunlik kutilayotgan ob-havo** (`weekly-forecast.png`) — bugun + 9 kun, harorat grafigi
    va **menejer tavsiyasi** (savdo uchun eng qulay kun + xodimlarga javob/dam maslahati).
 
 Bu servis TAMUR kiyim savdosi uchun mo‘ljallangan — ob-havo savdoga ta’sir qiladi.
@@ -15,8 +15,8 @@ Boshqa biznes funksiyalari yo‘q.
 ## 1. Project purpose
 
 - Har kuni 09:00 da avtomatik ishga tushadi (tashqi cron), 2 ta rasm yuboradi.
-- **Kunlik karta:** katta ikon, kunduzgi/tungi harorat, condition, namlik, shamol,
-  bosim, oy fazasi, quyosh chiqishi/botishi, Tong/Kun/Oqshom haroratlari.
+- **Kunlik karta:** katta ikon, kunduzgi/tungi harorat, condition, shamol, bosim,
+  Tong/Kun/Oqshom haroratlari. (Namlik, oy fazasi, quyosh chiqishi/botishi ko'rsatilmaydi.)
 - **10 kunlik:** har kun uchun ikon + max/min harorat, kunduzgi va tungi harorat
   chiziqlari (grafik), va pastda **menejer tavsiyasi** (deterministik, LLM yo‘q).
 - Lokal Poppins font, vektor kunduz/tun ikonlar (internetdan yuklanmaydi).
@@ -115,7 +115,7 @@ chatlarning `title`, `id`, `type` sini ko'rsatadi (token/sir chiqmaydi).
 1. [weatherapi.com](https://www.weatherapi.com/) da bepul ro'yxatdan o'ting.
 2. Dashboard'dan API key oling → `.env` da `WEATHERAPI_KEY=...`.
 
-Key bo'lmasa kunlik karta Open-Meteo bilan chiziladi (oy fazasi/bosim `—` bo'ladi).
+Key bo'lmasa kunlik karta Open-Meteo bilan chiziladi (bosim `—` bo'lishi mumkin).
 
 ## 10. Test
 

@@ -35,9 +35,16 @@ export function assertProductionLock(env: AppEnv): void {
     if (!/^-100\d+$/.test(chat)) problems.push(`Telegram chat ID formati noto‘g‘ri: ${chat}`);
   }
 
+  // FINAL LOCK: production'da faqat BITTA guruhga yuboriladi.
+  if (actualChats.length > 1) {
+    problems.push('Production‘da faqat bitta guruh (TELEGRAM_CHAT_ID) ruxsat etiladi');
+  }
+
   const expectedChats = normalizeChatIds(env.PRODUCTION_LOCK_CHAT_IDS);
   if (expectedChats.length === 0) {
     problems.push('PRODUCTION_LOCK_CHAT_IDS sozlanmagan');
+  } else if (expectedChats.length > 1) {
+    problems.push('PRODUCTION_LOCK_CHAT_IDS faqat bitta guruh bo‘lishi kerak');
   } else if (actualChats.join(',') !== expectedChats.join(',')) {
     problems.push('TELEGRAM_CHAT_ID production lock bilan mos emas');
   }

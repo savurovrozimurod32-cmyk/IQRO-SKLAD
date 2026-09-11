@@ -6,17 +6,18 @@ import type { ForecastDay, WeatherCondition } from './types.js';
  * Savdo uchun qulaylik — DETERMINISTIC (LLM YO'Q).
  * Har kun uchun ob-havoga asoslangan ball hisoblanadi.
  */
+// Quyoshli kunlar plus; quyosh bo'lmagan kunlar salqin/sust deb baholanadi.
 const CONDITION_SCORE: Record<WeatherCondition, number> = {
-  clear: 3,
-  partly_cloudy: 2,
-  cloudy: 0,
-  fog: -1,
-  drizzle: -2,
-  rain: -3,
-  heavy_rain: -5,
-  snow: -4,
-  thunderstorm: -6,
-  unknown: 0,
+  clear: 4, // quyoshli — eng qulay
+  partly_cloudy: 1, // biroz quyosh bor
+  cloudy: -1, // quyosh yo'q -> salqin/sust
+  fog: -2,
+  drizzle: -3,
+  rain: -4,
+  snow: -5,
+  heavy_rain: -6,
+  thunderstorm: -7,
+  unknown: -1, // ma'lumot yo'q -> ehtiyotkor
 };
 
 export function scoreDay(day: ForecastDay): number {
@@ -70,11 +71,11 @@ export function buildRecommendation(days: ForecastDay[], timezone: string): Reco
   const lines: string[] = [];
 
   if (best.score >= 4) {
-    lines.push(`${bestName} — savdo uchun eng qulay kun. Bu kuni hech kimga javob berilmaydi.`);
+    lines.push(`${bestName} — savdo uchun qulay kun. Bu kuni hech kimga javob berilmaydi.`);
   } else if (best.score >= 1) {
     lines.push(`${bestName} — savdo o‘rtacha bo‘lishi mumkin. Xodimlarga javob berishda ehtiyot bo‘ling.`);
   } else {
-    lines.push(`${bestName} — bu hafta ob-havo savdoga uncha qulay emas. Reja tuzishda ehtiyot bo‘ling.`);
+    lines.push(`${bestName} — bu hafta quyoshli kun kam, savdo sust bo‘lishi mumkin. Rejani ehtiyotkorlik bilan tuzing.`);
   }
 
   // Sust kun boshqa bo'lsa va sezilarli farq bo'lsa — ikkinchi qator

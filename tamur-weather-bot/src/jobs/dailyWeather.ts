@@ -66,7 +66,7 @@ export async function runDailyWeather(opts: { dryRun?: boolean } = {}): Promise<
       const png = await renderWeeklyCardPng(weekly, rec, { timezone: tz });
       logger.info('render', 'weekly-forecast PNG generated');
       if (!opts.dryRun) {
-        await sendPhoto(png, 'Buxoro • 10 kunlik bashorat');
+        await sendPhoto(png, 'Buxoro • 10 kunlik kutilayotgan ob-havo');
         sent++;
       }
     } catch (err) {

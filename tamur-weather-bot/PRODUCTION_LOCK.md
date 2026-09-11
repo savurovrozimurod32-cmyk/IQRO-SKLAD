@@ -10,12 +10,17 @@ Bu fayl production contractni belgilaydi. Foydalanuvchining aniq yangi talabisiz
 - Timezone: **Asia/Tashkent**
 - Cron: **0 4 * * *** = har kuni **09:00 Uzbekistan vaqti**
 - Har run: Telegramga **2 ta rasm**
-  1. `daily-summary.png` — bugungi ob-havo
-  2. `weekly-forecast.png` — to'liq 10 kun + menejer tavsiyasi
+  1. `daily-summary.png` (1080×1080) — bugungi ob-havo:
+     Buxoro, sana, katta ikon, kunduzgi/tungi harorat, condition, **Shamol**, **Bosim**,
+     **Tong/Kun/Oqshom**. (Namlik, Oy fazasi, Quyosh chiqishi/botishi **ko'rsatilmaydi**.)
+  2. `weekly-forecast.png` (1280×760) — **"10 KUNLIK KUTILAYOTGAN OB-HAVO"**
+     (UI'da "bashorat" so'zi ishlatilmaydi): to'liq 10 kun + harorat grafigi + menejer tavsiyasi
 - Daily primary: WeatherAPI, fallback: Open-Meteo
 - 10-day primary: Open-Meteo; fallback faqat to'liq 10 kun bera olsa qabul qilinadi
-- Manager tavsiyasi deterministic scoring; LLM ishlatilmaydi
-- Production Telegram target `PRODUCTION_LOCK_CHAT_IDS` orqali lock qilinadi
+- Manager tavsiyasi deterministic scoring; LLM ishlatilmaydi.
+  **Quyoshli kun = qulay; quyoshsiz/bulutli kun = salqin/sust** (clear > partly_cloudy > cloudy > …)
+- Production Telegram target: **FAQAT BITTA guruh**, `PRODUCTION_LOCK_CHAT_IDS` orqali lock qilinadi
+  (hozirgi target: `-1002087046851`)
 - Token/key hech qachon source yoki logga yozilmaydi
 
 ## Himoya qatlamlari
