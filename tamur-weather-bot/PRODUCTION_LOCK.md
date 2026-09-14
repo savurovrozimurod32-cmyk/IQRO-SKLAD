@@ -10,9 +10,11 @@ Bu fayl production contractni belgilaydi. Foydalanuvchining aniq yangi talabisiz
 - Timezone: **Asia/Tashkent**
 - Cron: **0 4 * * *** = har kuni **09:00 Uzbekistan vaqti**
 - Har run: Telegramga **2 ta rasm**
-  1. `daily-summary.png` (1080×1080) — bugungi ob-havo:
+  1. `daily-summary.png` (1080×1260) — bugungi ob-havo:
      Buxoro, sana, katta ikon, kunduzgi/tungi harorat, condition, **Shamol**, **Bosim**,
-     **Tong/Kun/Oqshom**. (Namlik, Oy fazasi, Quyosh chiqishi/botishi **ko'rsatilmaydi**.)
+     **Tong/Kun/Oqshom**, va **"Hafta oxiri savdo indeksi"** bloki (static: Juma +30%,
+     Shanba +50%, Yakshanba +80% — past savdo kunlariga nisbatan; ob-havoga bog'liq emas).
+     (Namlik, Oy fazasi, Quyosh chiqishi/botishi **ko'rsatilmaydi**.)
   2. `weekly-forecast.png` (1280×760) — **"10 KUNLIK KUTILAYOTGAN OB-HAVO"**
      (UI'da "bashorat" so'zi ishlatilmaydi): to'liq 10 kun + harorat grafigi + menejer tavsiyasi
 - Daily primary: WeatherAPI, fallback: Open-Meteo

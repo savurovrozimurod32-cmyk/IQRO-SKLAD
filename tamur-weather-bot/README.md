@@ -16,7 +16,9 @@ Boshqa biznes funksiyalari yo‘q.
 
 - Har kuni 09:00 da avtomatik ishga tushadi (tashqi cron), 2 ta rasm yuboradi.
 - **Kunlik karta:** katta ikon, kunduzgi/tungi harorat, condition, shamol, bosim,
-  Tong/Kun/Oqshom haroratlari. (Namlik, oy fazasi, quyosh chiqishi/botishi ko'rsatilmaydi.)
+  Tong/Kun/Oqshom haroratlari, va **"Hafta oxiri savdo indeksi"** bloki (static biznes
+  signali: Juma +30%, Shanba +50%, Yakshanba +80%). (Namlik, oy fazasi, quyosh
+  chiqishi/botishi ko'rsatilmaydi.)
 - **10 kunlik:** har kun uchun ikon + max/min harorat, kunduzgi va tungi harorat
   chiziqlari (grafik), va pastda **menejer tavsiyasi** (deterministik, LLM yo‘q).
 - Lokal Poppins font, vektor kunduz/tun ikonlar (internetdan yuklanmaydi).
