@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WEEKEND_SALES, WEEKEND_SALES_TITLE } from '../src/config/business.js';
+import { WEEKEND_SALES, WEEKEND_SALES_TITLE, WEEKEND_STAFF_POLICY } from '../src/config/business.js';
 import { buildDailySvg } from '../src/design/renderDailyCard.js';
 import { buildWeeklySvg } from '../src/design/renderWeeklyCard.js';
 import { sampleDailySummary, sampleWeeklyForecast } from '../src/weather/forecastSample.js';
@@ -41,8 +41,15 @@ describe('hafta oxiri savdo indeksi (static biznes signali)', () => {
     expect(svg).toContain('Past savdo kunlariga nisbatan');
     for (const w of WEEKEND_SALES) {
       expect(svg).toContain(w.day);
-      expect(svg).toContain(w.label); // +30% / +50% / +80%
+      expect(svg).toContain(w.label);
     }
+  });
+
+  it('daily cardda Shanba/Yakshanba qat’iy xodim qoidasi ko‘rinadi', () => {
+    expect(svg).toContain('SHANBA VA YAKSHANBA — QAT’IY QOIDA');
+    expect(svg).toContain(WEEKEND_STAFF_POLICY);
+    expect(WEEKEND_STAFF_POLICY).toContain('ob-havodan qat’i nazar');
+    expect(WEEKEND_STAFF_POLICY).toContain('javob berilmaydi');
   });
 });
 
