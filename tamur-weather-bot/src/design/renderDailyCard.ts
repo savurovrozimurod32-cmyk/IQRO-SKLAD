@@ -1,4 +1,4 @@
-import { WEEKEND_SALES, WEEKEND_SALES_NOTE, WEEKEND_SALES_TITLE } from '../config/business.js';
+import { WEEKEND_SALES, WEEKEND_SALES_NOTE, WEEKEND_SALES_TITLE, WEEKEND_STAFF_POLICY } from '../config/business.js';
 import { formatUzDayMonth, zonedTimeHHMM } from '../utils/datetime.js';
 import { uzLabel } from '../weather/conditions.js';
 import { isNum } from '../weather/normalize.js';
@@ -8,7 +8,7 @@ import { backgroundLayer, rasterize, text } from './svg.js';
 import { COLORS, backgroundFor } from './theme.js';
 
 const W = 1080;
-const H = 1260;
+const H = 1340;
 
 const tempStr = (v: number | null): string => (isNum(v) ? `${Math.round(v)}°` : '—');
 
@@ -114,7 +114,11 @@ export function buildDailySvg(s: DailySummary, opts: DailyRenderOptions): string
   ${pills}
   ${text(cx, 1176, WEEKEND_SALES_NOTE, { size: 22, weight: 500, fill: COLORS.creamFaint })}
 
-  ${text(cx, 1226, `Yangilandi • ${updated}`, { size: 22, weight: 500, fill: COLORS.creamFaint, spacing: 1 })}
+  <rect x="80" y="1200" width="920" height="88" rx="22" fill="${COLORS.cardFill}" stroke="${COLORS.copper}" stroke-width="2" />
+  ${text(cx, 1234, 'SHANBA VA YAKSHANBA — QAT’IY QOIDA', { size: 21, weight: 700, fill: COLORS.copper, spacing: 1 })}
+  ${text(cx, 1268, WEEKEND_STAFF_POLICY, { size: 19, weight: 600, fill: COLORS.cream })}
+
+  ${text(cx, 1318, `Yangilandi • ${updated}`, { size: 22, weight: 500, fill: COLORS.creamFaint, spacing: 1 })}
 </svg>`;
 }
 
