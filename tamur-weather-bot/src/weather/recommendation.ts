@@ -56,9 +56,18 @@ export interface Recommendation {
   lines: string[]; // rasmga chiqadigan qisqa matn(lar)
 }
 
+function isWeekendStaffLocked(date: string, timezone: string): boolean {
+  const dayName = weekdayFullUz(date, timezone);
+  return dayName === 'Shanba' || dayName === 'Yakshanba';
+}
+
 /**
  * Eng qulay (savdo) va eng sust kunni topib, menejer uchun qisqa tavsiya beradi.
- * Bir yoki ikki qisqa qator — keraksiz uzun matn yo'q.
+ *
+ * QAT'IY BIZNES QOIDASI:
+ * Shanba va Yakshanba kuni ob-havodan qat'i nazar xodimlarga javob berilmaydi.
+ * Shuning uchun "1 xodimga javob berish mumkin" tavsiyasi FAQAT Dushanba–Juma
+ * kunlaridan biriga berilishi mumkin.
  */
 export function buildRecommendation(days: ForecastDay[], timezone: string): Recommendation | null {
   if (days.length === 0) return null;
@@ -70,7 +79,11 @@ export function buildRecommendation(days: ForecastDay[], timezone: string): Reco
   const bestName = weekdayFullUz(best.day.date, timezone);
   const lines: string[] = [];
 
-  if (best.score >= 4) {
+  if (isWeekendStaffLocked(best.day.date, timezone)) {
+    lines.push(
+      `${bestName} — ob-havodan qat’i nazar xodimlarga javob berilmaydi.`,
+    );
+  } else if (best.score >= 4) {
     lines.push(`${bestName} — savdo uchun qulay kun. Bu kuni hech kimga javob berilmaydi.`);
   } else if (best.score >= 1) {
     lines.push(`${bestName} — savdo o‘rtacha bo‘lishi mumkin. Xodimlarga javob berishda ehtiyot bo‘ling.`);
@@ -78,10 +91,19 @@ export function buildRecommendation(days: ForecastDay[], timezone: string): Reco
     lines.push(`${bestName} — bu hafta quyoshli kun kam, savdo sust bo‘lishi mumkin. Rejani ehtiyotkorlik bilan tuzing.`);
   }
 
-  // Sust kun boshqa bo'lsa va sezilarli farq bo'lsa — ikkinchi qator
-  if (worst.day.date !== best.day.date && best.score - worst.score >= 3) {
-    const worstName = weekdayFullUz(worst.day.date, timezone);
-    lines.push(`${worstName} — savdo sust bo‘lishi mumkin. Zarurat bo‘lsa 1 xodimga javob berish mumkin.`);
+  // "Javob berish mumkin" tavsiyasi weekendga HECH QACHON chiqmaydi.
+  // Eng sust Dushanba–Juma kunini topamiz.
+  const leaveCandidates = scored.filter(
+    (x) => x.day.date !== best.day.date && !isWeekendStaffLocked(x.day.date, timezone),
+  );
+  if (leaveCandidates.length > 0) {
+    const leaveDay = leaveCandidates.reduce((a, b) => (b.score < a.score ? b : a));
+    if (best.score - leaveDay.score >= 3) {
+      const leaveName = weekdayFullUz(leaveDay.day.date, timezone);
+      lines.push(
+        `${leaveName} — savdo sust bo‘lishi mumkin. Zarurat bo‘lsa 1 xodimga javob berish mumkin.`,
+      );
+    }
   }
 
   return { bestDate: best.day.date, worstDate: worst.day.date, lines };
