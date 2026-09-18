@@ -18,3 +18,11 @@ export const WEEKEND_SALES: readonly WeekendSale[] = [
 
 export const WEEKEND_SALES_TITLE = 'Hafta oxiri savdo indeksi';
 export const WEEKEND_SALES_NOTE = 'Past savdo kunlariga nisbatan';
+
+/**
+ * QAT'IY BIZNES QOIDASI:
+ * Shanba va Yakshanba kuni ob-havodan qat'i nazar xodimlarga javob berilmaydi.
+ * Bu qoida ob-havo recommendationidan USTUN turadi.
+ */
+export const WEEKEND_STAFF_POLICY =
+  'Shanba va Yakshanba — ob-havodan qat’i nazar xodimlarga javob berilmaydi.';
