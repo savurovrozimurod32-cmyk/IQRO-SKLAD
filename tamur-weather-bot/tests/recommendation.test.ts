@@ -71,7 +71,6 @@ describe('cloudy = salqin/sust (final lock qoidasi)', () => {
   });
 
   it('cloudy kun condition hissasi manfiy (quyosh yo‘q -> salqin)', () => {
-    // Bir xil haroratdagi clear va cloudy farqi >= 4 (4 -> -1)
     const clear = scoreDay(day('2026-09-10', { condition: 'clear', maxTempC: 30 }));
     const cloudy = scoreDay(day('2026-09-10', { condition: 'cloudy', maxTempC: 30 }));
     expect(clear - cloudy).toBeGreaterThanOrEqual(4);
@@ -83,7 +82,7 @@ describe('cloudy = salqin/sust (final lock qoidasi)', () => {
       day('2026-09-11', { condition: 'clear', maxTempC: 30 }),
     ];
     const rec = buildRecommendation(days, TZ)!;
-    expect(rec.bestDate).toBe('2026-09-11'); // clear kun
+    expect(rec.bestDate).toBe('2026-09-11');
   });
 
   it('butun hafta cloudy bo‘lsa "qulay kun / hech kimga javob berilmaydi" chiqmaydi', () => {
@@ -93,5 +92,35 @@ describe('cloudy = salqin/sust (final lock qoidasi)', () => {
     ];
     const rec = buildRecommendation(days, TZ)!;
     expect(rec.lines[0]).not.toContain('hech kimga javob berilmaydi');
+  });
+});
+
+describe('weekend xodim policy — ob-havodan USTUN', () => {
+  it('eng sust kun Shanba bo‘lsa ham "javob berish mumkin" Shanbaga chiqmaydi', () => {
+    const days: ForecastDay[] = [
+      day('2026-09-11', { condition: 'clear', maxTempC: 30 }), // Juma — best
+      day('2026-09-12', { condition: 'thunderstorm', maxTempC: 20, precipitationProbability: 90, windKmh: 45 }), // Shanba — overall worst
+      day('2026-09-14', { condition: 'rain', maxTempC: 22, precipitationProbability: 70, windKmh: 40 }), // Dushanba — leave candidate
+    ];
+    const rec = buildRecommendation(days, TZ)!;
+    const leaveLine = rec.lines.find((line) => line.includes('javob berish mumkin'));
+    expect(leaveLine).toBeDefined();
+    expect(leaveLine).toContain('Dushanba');
+    expect(leaveLine).not.toContain('Shanba');
+    expect(leaveLine).not.toContain('Yakshanba');
+  });
+
+  it('Shanba eng yaxshi kun bo‘lsa ham qat’iy "javob berilmaydi" qoidasini chiqaradi', () => {
+    const days: ForecastDay[] = [
+      day('2026-09-11', { condition: 'rain', maxTempC: 20, precipitationProbability: 80 }),
+      day('2026-09-12', { condition: 'clear', maxTempC: 30 }), // Shanba — best
+      day('2026-09-13', { condition: 'cloudy', maxTempC: 28 }), // Yakshanba
+    ];
+    const rec = buildRecommendation(days, TZ)!;
+    expect(rec.bestDate).toBe('2026-09-12');
+    expect(rec.lines[0]).toContain('Shanba');
+    expect(rec.lines[0]).toContain('ob-havodan qat’i nazar');
+    expect(rec.lines[0]).toContain('javob berilmaydi');
+    expect(rec.lines[0]).not.toContain('javob berish mumkin');
   });
 });
