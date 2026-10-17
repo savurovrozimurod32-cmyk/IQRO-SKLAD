@@ -9,17 +9,17 @@ Bu fayl production contractni belgilaydi. Foydalanuvchining aniq yangi talabisiz
 - Shahar: **Buxoro**
 - Timezone: **Asia/Tashkent**
 - Cron: **0 4 * * *** = har kuni **09:00 Uzbekistan vaqti**
-- Har run: Telegramga **2 ta rasm**
-  1. `daily-summary.png` (1080×1340) — bugungi ob-havo:
-     Buxoro, sana, katta ikon, kunduzgi/tungi harorat, condition, **Shamol**, **Bosim**,
-     **Tong/Kun/Oqshom**, va **"Hafta oxiri savdo indeksi"** bloki (static: Juma +30%,
-     Shanba +50%, Yakshanba +80% — past savdo kunlariga nisbatan; ob-havoga bog'liq emas).
-     Shu blok ostida qat'iy xodim qoidasi ko'rsatiladi:
-     **Shanba va Yakshanba — ob-havodan qat'i nazar xodimlarga javob berilmaydi.**
-     (Namlik, Oy fazasi, Quyosh chiqishi/botishi **ko'rsatilmaydi**.)
-  2. `weekly-forecast.png` (1280×760) — **"10 KUNLIK KUTILAYOTGAN OB-HAVO"**
-     (UI'da "bashorat" so'zi ishlatilmaydi): to'liq 10 kun + harorat grafigi + menejer tavsiyasi
-- Daily primary: WeatherAPI, fallback: Open-Meteo
+- Har run: Telegramga **FAQAT 1 ta rasm** (`weekly-forecast.png`, 1280×980):
+  **"10 KUNLIK KUTILAYOTGAN OB-HAVO"** (UI'da "bashorat" so'zi ishlatilmaydi):
+  - 10 kun: har kun uchun hafta kuni + **SANA (DD.MM)** + ikon + kunduzgi/tungi harorat
+  - kunduzgi va tungi harorat grafigi (chiziqlar)
+  - **"Hafta oxiri savdo indeksi"** bloki (static, ob-havoga bog'liq emas):
+    Juma +30%, Shanba +50%, Yakshanba +80% — past savdo kunlariga nisbatan
+  - **MENEJER TAVSIYASI** boksi: qat'iy xodim qoidasi
+    (**Shanba va Yakshanba — ob-havodan qat'i nazar xodimlarga javob berilmaydi**) +
+    ob-havoga asoslangan deterministic tavsiya
+  - Bugungi kunlik karta (daily-summary) **endi yuborilmaydi** (bitta rasm yetarli).
+    (`renderDailyCard` moduli kodda saqlangan, lekin production oqimida ishlatilmaydi.)
 - 10-day primary: Open-Meteo; fallback faqat to'liq 10 kun bera olsa qabul qilinadi
 - Manager tavsiyasi deterministic scoring; LLM ishlatilmaydi.
   **Quyoshli kun = qulay; quyoshsiz/bulutli kun = salqin/sust** (clear > partly_cloudy > cloudy > …)
@@ -50,6 +50,6 @@ Production kodni faqat foydalanuvchi aniq o'zgartirish so'raganda oching. Har o'
 4. GitHub push
 5. Render deploy PASS
 6. Trigger Run
-7. ikkala rasm kerakli guruhga tushganini tekshirish
+7. rasm kerakli guruhga tushganini tekshirish
 
 Shularning biri PASS bo'lmasa production final deb hisoblanmaydi.

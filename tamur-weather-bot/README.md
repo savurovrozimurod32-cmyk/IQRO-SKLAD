@@ -1,15 +1,16 @@
 # TAMUR Weather Bot — Buxoro ob-havo
 
 Har kuni soat **09:00 (Asia/Tashkent)** da Buxoro shahri uchun TAMUR Telegram
-guruhiga **2 ta premium rasm** yuboradi:
+guruhiga **1 ta premium rasm** yuboradi:
 
-1. **Kunlik ob-havo kartasi** (`daily-summary.png`) — bugungi kun to‘liq xulosasi.
-2. **10 kunlik kutilayotgan ob-havo** (`weekly-forecast.png`) — bugun + 9 kun, harorat grafigi
-   va **menejer tavsiyasi**.
+**10 kunlik kutilayotgan ob-havo** (`weekly-forecast.png`) — bugun + 9 kun (har
+kun uchun hafta kuni + **sana**, ikon, kunduzgi/tungi harorat), harorat grafigi,
+**Hafta oxiri savdo indeksi** (Juma +30%, Shanba +50%, Yakshanba +80%) va
+**menejer tavsiyasi**. Bugungi kunlik karta endi yuborilmaydi (bitta rasm yetarli).
 
 ## Asosiy biznes qoidalari
 
-- Kunlik kartada **Hafta oxiri savdo indeksi**:
+- Rasmda **Hafta oxiri savdo indeksi**:
   - Juma **+30%**
   - Shanba **+50%**
   - Yakshanba **+80%**
@@ -19,7 +20,6 @@ guruhiga **2 ta premium rasm** yuboradi:
 - Ob-havo bo'yicha sust kun uchun **"1 xodimga javob berish mumkin"** tavsiyasi
   faqat **Dushanba–Juma** kunlaridan biriga chiqishi mumkin.
 - Menejer tavsiyasi deterministic; LLM ishlatilmaydi.
-- Namlik, oy fazasi, quyosh chiqishi/botishi kunlik kartada ko'rsatilmaydi.
 
 ## Production
 
@@ -29,7 +29,7 @@ guruhiga **2 ta premium rasm** yuboradi:
 - Telegram: **bitta production guruh**
 - Daily primary: WeatherAPI, fallback: Open-Meteo
 - 10-day primary: Open-Meteo
-- Har run: 2 ta rasm
+- Har run: 1 ta rasm (`weekly-forecast.png`)
 
 ## Test / build
 

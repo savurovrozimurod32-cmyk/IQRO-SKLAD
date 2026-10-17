@@ -137,3 +137,9 @@ export function formatUzDayMonth(dateISO: string): string {
 export function dayOfMonth(dateISO: string): number {
   return Number(dateISO.split('-')[2] ?? 0);
 }
+
+/** "DD.MM" (haftalik kartada hafta kuni ostidagi sana). */
+export function dayDotMonth(dateISO: string): string {
+  const [, m, d] = dateISO.split('-');
+  return `${d ?? '--'}.${m ?? '--'}`;
+}
