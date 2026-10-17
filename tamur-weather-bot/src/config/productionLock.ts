@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import type { AppEnv } from './env.js';
 
 const BUXORO_LAT = 39.7747;
@@ -42,7 +43,10 @@ export function assertProductionLock(env: AppEnv): void {
 
   const expectedChats = normalizeChatIds(env.PRODUCTION_LOCK_CHAT_IDS);
   if (expectedChats.length === 0) {
-    problems.push('PRODUCTION_LOCK_CHAT_IDS sozlanmagan');
+    // Lock yoqilgan, lekin kutilgan guruh ro'yxati berilmagan.
+    // Bu holatda "qulflashga narsa yo'q" — postni BLOKLAMAYMIZ (faqat ogohlantiramiz).
+    // Shunda noto'g'ri sozlangan lock butun servisni to'xtatib qo'ymaydi.
+    logger.warn('lock', 'PRODUCTION_LOCK_CHAT_IDS sozlanmagan — chat lock tekshiruvi o‘tkazib yuborildi');
   } else if (expectedChats.length > 1) {
     problems.push('PRODUCTION_LOCK_CHAT_IDS faqat bitta guruh bo‘lishi kerak');
   } else if (actualChats.join(',') !== expectedChats.join(',')) {
