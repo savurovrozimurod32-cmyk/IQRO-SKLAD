@@ -1,0 +1,39 @@
+name: TAMUR Weather — Send
+
+# GitHub serverlari Telegram'ga chiqa oladi, shuning uchun rasm shu yerdan yuboriladi.
+# Ishga tushirish: `tamur-weather-bot/.ci/trigger` faylini yangilab push qilinadi
+# (yoki default branchda bo'lsa — Actions sahifasidan "Run workflow").
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - claude/tamur-weather-bot-ow96wt
+    paths:
+      - 'tamur-weather-bot/.ci/trigger'
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tamur-weather-bot
+    env:
+      NODE_ENV: production
+      WEATHER_CITY: Buxoro
+      WEATHER_LAT: "39.7747"
+      WEATHER_LON: "64.4286"
+      WEATHER_TIMEZONE: Asia/Tashkent
+      # GitHub run uchun lockni yoqmaymiz (bitta guruh secret orqali keladi).
+      PRODUCTION_LOCK_ENABLED: "false"
+      WEATHERAPI_KEY: ${{ secrets.WEATHERAPI_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install deps
+        run: npm ci
+      - name: Send weather image to Telegram
+        run: npm run send:daily
