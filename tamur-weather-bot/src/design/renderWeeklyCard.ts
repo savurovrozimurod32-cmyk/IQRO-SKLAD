@@ -1,4 +1,4 @@
-import { WEEKEND_SALES, WEEKEND_SALES_NOTE, WEEKEND_SALES_TITLE, WEEKEND_STAFF_POLICY } from '../config/business.js';
+import { WEEKEND_SALES, WEEKEND_SALES_NOTE, WEEKEND_SALES_TITLE, WEEKEND_STAFF_POLICY, colorForPercent } from '../config/business.js';
 import { dayDotMonth, weekdayShortUz, zonedTimeHHMM } from '../utils/datetime.js';
 import { isNum } from '../weather/normalize.js';
 import type { Recommendation } from '../weather/recommendation.js';
@@ -108,7 +108,7 @@ export function buildWeeklySvg(
   const pillY = 548;
   const pillH = 112;
   const pills = WEEKEND_SALES.map((s, i) =>
-    weekendPill(MARGIN + i * (pillW + gap), pillY, pillW, pillH, s.day, s.label, s.accent),
+    weekendPill(MARGIN + i * (pillW + gap), pillY, pillW, pillH, s.day, s.label, colorForPercent(s.percent)),
   ).join('');
 
   // Menejer tavsiyasi boksi (ichida hafta oxiri siyosati + ob-havo tavsiyasi)

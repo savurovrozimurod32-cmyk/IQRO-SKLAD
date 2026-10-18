@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WEEKEND_SALES, WEEKEND_SALES_TITLE, WEEKEND_STAFF_POLICY } from '../src/config/business.js';
+import { WEEKEND_SALES, WEEKEND_SALES_TITLE, WEEKEND_STAFF_POLICY, colorForPercent, PERCENT_COLORS } from '../src/config/business.js';
 import { buildDailySvg } from '../src/design/renderDailyCard.js';
 import { buildWeeklySvg } from '../src/design/renderWeeklyCard.js';
 import { dayDotMonth } from '../src/utils/datetime.js';
@@ -51,6 +51,37 @@ describe('weekly card: hafta oxiri savdo indeksi (static biznes signali)', () =>
     expect(svg).toContain(WEEKEND_STAFF_POLICY);
     expect(WEEKEND_STAFF_POLICY).toContain('ob-havodan qat’i nazar');
     expect(WEEKEND_STAFF_POLICY).toContain('javob berilmaydi');
+  });
+});
+
+describe('foizdan kelib chiqib rang (yuqori=yashil, past=qizil)', () => {
+  const weekly = sampleWeeklyForecast(TZ);
+  const svg = buildWeeklySvg(weekly, buildRecommendation(weekly.days, TZ), { timezone: TZ });
+
+  it('bucketlar to‘g‘ri', () => {
+    expect(colorForPercent(80)).toBe(PERCENT_COLORS.green);
+    expect(colorForPercent(50)).toBe(PERCENT_COLORS.yellow);
+    expect(colorForPercent(30)).toBe(PERCENT_COLORS.red);
+    expect(colorForPercent(40)).toBe(PERCENT_COLORS.flame);
+    expect(colorForPercent(10)).toBe(PERCENT_COLORS.darkRed);
+  });
+
+  it('pasaygan sari yashildan uzoqlashadi (monotonik tartib)', () => {
+    const order = [
+      PERCENT_COLORS.green,
+      PERCENT_COLORS.yellow,
+      PERCENT_COLORS.flame,
+      PERCENT_COLORS.red,
+      PERCENT_COLORS.darkRed,
+    ];
+    const seq = [90, 60, 40, 30, 5].map(colorForPercent);
+    expect(seq).toEqual(order);
+  });
+
+  it('haftalik rasmda pill ranglari foizga mos (80=yashil, 50=sariq, 30=qizil)', () => {
+    expect(svg).toContain(PERCENT_COLORS.green); // Yakshanba +80%
+    expect(svg).toContain(PERCENT_COLORS.yellow); // Shanba +50%
+    expect(svg).toContain(PERCENT_COLORS.red); // Juma +30%
   });
 });
 
