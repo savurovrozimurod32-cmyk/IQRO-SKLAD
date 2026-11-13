@@ -1,0 +1,10 @@
+.git
+.github
+Dockerfile
+nginx.conf
+README.md
+VPS-DEPLOY.md
+*.zip
+*.log
+.env
+.env.*
