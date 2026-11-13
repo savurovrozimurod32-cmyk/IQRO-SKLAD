@@ -1,0 +1,9 @@
+.git
+.github
+Dockerfile
+README.md
+VPS-DEPLOY.md
+*.zip
+*.log
+.env
+.env.*
